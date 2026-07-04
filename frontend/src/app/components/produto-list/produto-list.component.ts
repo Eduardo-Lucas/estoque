@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Produto } from '../../models/produto.model';
 import { ResultadoImportacao } from '../../models/csv.model';
+import { ResultadoImportacaoNfe } from '../../models/nfe.model';
 import { ProdutoService } from '../../services/produto.service';
 
 @Component({
@@ -26,6 +27,9 @@ export class ProdutoListComponent implements OnInit {
   importando = false;
   exportando = false;
   resultadoImportacao: ResultadoImportacao | null = null;
+
+  importandoNfe = false;
+  resultadoImportacaoNfe: ResultadoImportacaoNfe | null = null;
 
   pagina = 1;
   tamanhoPagina = 10;
@@ -113,6 +117,34 @@ export class ProdutoListComponent implements OnInit {
       },
       error: (err) => {
         this.importando = false;
+        this.erro = err.message;
+        input.value = '';
+      },
+    });
+  }
+
+  importarNfe(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    if (!arquivo) return;
+
+    this.erro = '';
+    this.sucesso = '';
+    this.resultadoImportacaoNfe = null;
+    this.importandoNfe = true;
+
+    this.produtoService.importarNfe(arquivo).subscribe({
+      next: (resultado) => {
+        this.importandoNfe = false;
+        this.resultadoImportacaoNfe = resultado;
+        this.sucesso = `NF-e ${resultado.numero_nfe} (${resultado.fornecedor}): `
+          + `${resultado.itens_processados} item(ns) processado(s), `
+          + `${resultado.itens_ja_processados} já processado(s) anteriormente.`;
+        this.carregar();
+        input.value = '';
+      },
+      error: (err) => {
+        this.importandoNfe = false;
         this.erro = err.message;
         input.value = '';
       },

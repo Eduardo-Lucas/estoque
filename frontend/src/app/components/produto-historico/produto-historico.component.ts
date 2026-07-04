@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Produto } from '../../models/produto.model';
-import { Movimentacao } from '../../models/movimentacao.model';
+import { Movimentacao, TIPO_MOVIMENTACAO_LABELS } from '../../models/movimentacao.model';
 import { ProdutoService } from '../../services/produto.service';
 import { MovimentacaoService } from '../../services/movimentacao.service';
 
@@ -22,6 +22,7 @@ export class ProdutoHistoricoComponent implements OnInit {
   produtoId!: number;
   produto: Produto | null = null;
   movimentacoes: Movimentacao[] = [];
+  readonly tipoLabels = TIPO_MOVIMENTACAO_LABELS;
 
   carregandoProduto = false;
   carregandoMovimentacoes = false;

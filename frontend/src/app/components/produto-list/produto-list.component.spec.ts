@@ -13,6 +13,7 @@ describe('ProdutoListComponent', () => {
     remover: jest.Mock;
     importarCsv: jest.Mock;
     exportarCsv: jest.Mock;
+    importarNfe: jest.Mock;
   };
   let navigate: jest.SpyInstance;
 
@@ -37,6 +38,7 @@ describe('ProdutoListComponent', () => {
       remover: jest.fn().mockReturnValue(of(undefined)),
       importarCsv: jest.fn(),
       exportarCsv: jest.fn(),
+      importarNfe: jest.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -174,6 +176,51 @@ describe('ProdutoListComponent', () => {
 
       expect(component.erro).toBe('csv inválido');
       expect(component.importando).toBe(false);
+    });
+  });
+
+  describe('importação de NF-e', () => {
+    function eventoComArquivo(arquivo: File | undefined): Event {
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', { value: arquivo ? [arquivo] : [] });
+      return { target: input } as unknown as Event;
+    }
+
+    it('importa o XML selecionado, mostra o resumo e recarrega a lista', () => {
+      const resultado = {
+        numero_nfe: '123',
+        fornecedor: 'Distribuidora ABC',
+        itens_processados: 2,
+        itens_ja_processados: 1,
+        nao_encontrados: [],
+        erros: [],
+      };
+      produtoService.importarNfe.mockReturnValue(of(resultado));
+      const arquivo = new File(['<NFe></NFe>'], 'nfe.xml');
+
+      component.importarNfe(eventoComArquivo(arquivo));
+
+      expect(produtoService.importarNfe).toHaveBeenCalledWith(arquivo);
+      expect(component.resultadoImportacaoNfe).toEqual(resultado);
+      expect(component.sucesso).toContain('123');
+      expect(component.sucesso).toContain('Distribuidora ABC');
+      expect(component.sucesso).toContain('2 item(ns) processado(s)');
+      expect(component.importandoNfe).toBe(false);
+    });
+
+    it('não faz nada quando nenhum arquivo é selecionado', () => {
+      component.importarNfe(eventoComArquivo(undefined));
+      expect(produtoService.importarNfe).not.toHaveBeenCalled();
+    });
+
+    it('trata erro de importação', () => {
+      produtoService.importarNfe.mockReturnValue(throwError(() => new Error('XML inválido')));
+      const arquivo = new File(['x'], 'nfe.xml');
+
+      component.importarNfe(eventoComArquivo(arquivo));
+
+      expect(component.erro).toBe('XML inválido');
+      expect(component.importandoNfe).toBe(false);
     });
   });
 

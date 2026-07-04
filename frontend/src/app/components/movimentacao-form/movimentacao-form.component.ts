@@ -10,7 +10,7 @@ import {
 } from '@angular/forms';
 import { Observable, catchError, map, of } from 'rxjs';
 import { Produto } from '../../models/produto.model';
-import { Movimentacao, TipoMovimentacao } from '../../models/movimentacao.model';
+import { Movimentacao, TIPO_MOVIMENTACAO_LABELS, TipoMovimentacao } from '../../models/movimentacao.model';
 import { ProdutoService } from '../../services/produto.service';
 import { MovimentacaoService } from '../../services/movimentacao.service';
 import { AuthService } from '../../services/auth.service';
@@ -30,6 +30,7 @@ export class MovimentacaoFormComponent implements OnInit {
 
   produtos: Produto[] = [];
   movimentacoes: Movimentacao[] = [];
+  readonly tipoLabels = TIPO_MOVIMENTACAO_LABELS;
 
   erro = '';
   sucesso = '';

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35240112345678000199550010000012341123456789" versao="4.00">
+      <ide>
+        <nNF>1234</nNF>
+        <dhEmi>2026-07-01T10:00:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>12345678000199</CNPJ>
+        <xNome>Distribuidora ABC Ltda</xNome>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <cProd>PRF-001</cProd>
+          <xProd>Parafuso 10mm</xProd>
+          <qCom>50.0000</qCom>
+          <vUnCom>1.5000</vUnCom>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>NOVO-XYZ</cProd>
+          <xProd>Produto Desconhecido</xProd>
+          <qCom>3.0000</qCom>
+          <vUnCom>10.0000</vUnCom>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vNF>105.00</vNF>
+        </ICMSTot>
+      </total>
+    </infNFe>
+  </NFe>
+  <protNFe>
+    <infProt>
+      <chNFe>35240112345678000199550010000012341123456789</chNFe>
+    </infProt>
+  </protNFe>
+</nfeProc>
