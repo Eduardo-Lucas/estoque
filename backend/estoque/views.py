@@ -1,5 +1,7 @@
 import csv
 import io
+import re
+from decimal import Decimal
 
 from django.db import transaction
 from django.http import HttpResponse
@@ -8,7 +10,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
-from .models import Produto, Categoria, Fornecedor, Movimentacao
+from . import nfe
+from .models import Produto, Categoria, Fornecedor, Movimentacao, NotaFiscalCompra, ItemNotaFiscalCompra
 from .serializers import ProdutoSerializer, CategoriaSerializer, FornecedorSerializer, MovimentacaoSerializer
 
 
@@ -18,6 +21,17 @@ def _formatar_erros(erros_por_campo):
         primeira = mensagens[0] if isinstance(mensagens, list) else mensagens
         partes.append(f'{campo}: {primeira}')
     return '; '.join(partes)
+
+
+def _ajustar_estoque(movimentacao):
+    """Aplica o efeito da movimentação na quantidade do produto (requisição
+    retira do estoque; qualquer outro tipo — devolução ou compra — devolve)."""
+    produto = movimentacao.produto
+    if movimentacao.tipo == Movimentacao.REQUISICAO:
+        produto.quantidade -= movimentacao.quantidade
+    else:
+        produto.quantidade += movimentacao.quantidade
+    produto.save(update_fields=['quantidade', 'atualizado_em'])
 
 
 def _ler_csv(arquivo):
@@ -167,6 +181,33 @@ def _exportar_csv_simples(queryset, nome_arquivo, colunas, extrair_linha):
     return response
 
 
+def _buscar_produto_por_item_nfe(item_nfe):
+    """Casa um item da NF-e com um Produto existente por SKU (código do
+    fornecedor) ou, na falta desse match, por nome. Nunca cria produto novo."""
+    codigo = (item_nfe.codigo_produto_fornecedor or '').strip()
+    if codigo:
+        produto = Produto.objects.filter(sku=codigo).first()
+        if produto:
+            return produto
+    return Produto.objects.filter(nome__iexact=item_nfe.descricao.strip()).first()
+
+
+def _obter_ou_criar_fornecedor_por_nfe(emitente):
+    """Casa o emitente da NF-e com um Fornecedor existente por CNPJ (normalizado,
+    já que o campo não tem formatação obrigatória) ou por nome; cria se não achar."""
+    cnpj_nota = re.sub(r'\D', '', emitente.cnpj or '')
+    if cnpj_nota:
+        for fornecedor in Fornecedor.objects.exclude(cnpj=''):
+            if re.sub(r'\D', '', fornecedor.cnpj) == cnpj_nota:
+                return fornecedor
+
+    fornecedor, _ = Fornecedor.objects.get_or_create(
+        nome__iexact=emitente.nome,
+        defaults={'nome': emitente.nome, 'cnpj': emitente.cnpj},
+    )
+    return fornecedor
+
+
 class ProdutoViewSet(viewsets.ModelViewSet):
     """
     CRUD completo de produtos.
@@ -291,6 +332,125 @@ class ProdutoViewSet(viewsets.ModelViewSet):
 
         return response
 
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
+    def importar_nfe(self, request):
+        """
+        POST /api/produtos/importar_nfe/  -> dá entrada em estoque a partir do
+        XML de uma NF-e de compra (padrão SEFAZ).
+
+        Casa os itens da nota com produtos existentes por SKU (código do
+        produto no fornecedor) ou por nome. Itens sem correspondência NÃO
+        criam produto novo: ficam pendentes em "nao_encontrados" até o
+        produto ser cadastrado manualmente e o mesmo arquivo ser reimportado.
+        Reimportar o mesmo arquivo é seguro — itens já processados são
+        ignorados (idempotente), só os pendentes/com erro são reprocessados.
+        """
+        arquivo = request.FILES.get('arquivo')
+        if not arquivo:
+            return Response(
+                {'detail': 'Envie o XML da NF-e no campo "arquivo".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            dados = nfe.parse_nfe(arquivo.read())
+        except nfe.NFeInvalidaError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        fornecedor = _obter_ou_criar_fornecedor_por_nfe(dados.emitente)
+        nota_fiscal, _ = NotaFiscalCompra.objects.get_or_create(
+            chave_acesso=dados.chave_acesso,
+            defaults={
+                'numero': dados.numero,
+                'fornecedor': fornecedor,
+                'valor_total': dados.valor_total,
+                'data_emissao': dados.data_emissao,
+            },
+        )
+
+        itens_processados = 0
+        itens_ja_processados = 0
+        nao_encontrados = []
+        erros = []
+
+        for item_nfe in dados.itens:
+            item_registro, _ = ItemNotaFiscalCompra.objects.get_or_create(
+                nota_fiscal=nota_fiscal,
+                numero_item=item_nfe.numero_item,
+                defaults={
+                    'codigo_produto_fornecedor': item_nfe.codigo_produto_fornecedor,
+                    'descricao': item_nfe.descricao,
+                    'quantidade': item_nfe.quantidade,
+                    'valor_unitario': item_nfe.valor_unitario,
+                },
+            )
+
+            if item_registro.processado:
+                itens_ja_processados += 1
+                continue
+
+            produto = _buscar_produto_por_item_nfe(item_nfe)
+            if produto is None:
+                nao_encontrados.append({
+                    'item': item_nfe.numero_item,
+                    'codigo_fornecedor': item_nfe.codigo_produto_fornecedor,
+                    'descricao': item_nfe.descricao,
+                })
+                continue
+
+            if item_nfe.quantidade != item_nfe.quantidade.to_integral_value():
+                erros.append({
+                    'item': item_nfe.numero_item,
+                    'mensagem': (
+                        f'Quantidade fracionária ({item_nfe.quantidade}) não suportada '
+                        f'para "{produto.nome}".'
+                    ),
+                })
+                continue
+
+            preco_custo = item_nfe.valor_unitario.quantize(Decimal('0.01'))
+            preco_serializer = ProdutoSerializer(
+                produto, data={'preco_custo': str(preco_custo)}, partial=True,
+            )
+            mov_serializer = MovimentacaoSerializer(data={
+                'produto': produto.id,
+                'tipo': Movimentacao.COMPRA,
+                'quantidade': int(item_nfe.quantidade),
+                'solicitante': request.user.username,
+                'observacao': f'Compra via NF-e {dados.numero}',
+            })
+
+            preco_valido = preco_serializer.is_valid()
+            mov_valido = mov_serializer.is_valid()
+            if not (preco_valido and mov_valido):
+                mensagens = []
+                if not preco_valido:
+                    mensagens.append(_formatar_erros(preco_serializer.errors))
+                if not mov_valido:
+                    mensagens.append(_formatar_erros(mov_serializer.errors))
+                erros.append({'item': item_nfe.numero_item, 'mensagem': '; '.join(mensagens)})
+                continue
+
+            with transaction.atomic():
+                preco_serializer.save()
+                movimentacao = mov_serializer.save()
+                _ajustar_estoque(movimentacao)
+                item_registro.produto = produto
+                item_registro.movimentacao = movimentacao
+                item_registro.processado = True
+                item_registro.save(update_fields=['produto', 'movimentacao', 'processado'])
+
+            itens_processados += 1
+
+        return Response({
+            'numero_nfe': dados.numero,
+            'fornecedor': fornecedor.nome,
+            'itens_processados': itens_processados,
+            'itens_ja_processados': itens_ja_processados,
+            'nao_encontrados': nao_encontrados,
+            'erros': erros,
+        }, status=status.HTTP_200_OK)
+
 
 class CategoriaViewSet(viewsets.ModelViewSet):
     """CRUD de categorias de produto."""
@@ -364,12 +524,6 @@ class MovimentacaoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         movimentacao = serializer.save()
-
-        produto = movimentacao.produto
-        if movimentacao.tipo == Movimentacao.REQUISICAO:
-            produto.quantidade -= movimentacao.quantidade
-        else:
-            produto.quantidade += movimentacao.quantidade
-        produto.save(update_fields=['quantidade', 'atualizado_em'])
+        _ajustar_estoque(movimentacao)
 
         return Response(self.get_serializer(movimentacao).data, status=status.HTTP_201_CREATED)

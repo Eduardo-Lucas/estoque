@@ -72,9 +72,11 @@ class Produto(models.Model):
 class Movimentacao(models.Model):
     REQUISICAO = 'REQUISICAO'
     DEVOLUCAO = 'DEVOLUCAO'
+    COMPRA = 'COMPRA'
     TIPO_CHOICES = [
         (REQUISICAO, 'Requisição'),
         (DEVOLUCAO, 'Devolução'),
+        (COMPRA, 'Compra'),
     ]
 
     produto = models.ForeignKey(Produto, related_name='movimentacoes', on_delete=models.CASCADE)
@@ -89,3 +91,43 @@ class Movimentacao(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} - {self.produto.nome} ({self.quantidade})'
+
+
+class NotaFiscalCompra(models.Model):
+    chave_acesso = models.CharField(max_length=44, unique=True)
+    numero = models.CharField(max_length=20, blank=True)
+    fornecedor = models.ForeignKey(
+        Fornecedor, related_name='notas_fiscais', on_delete=models.SET_NULL, null=True,
+    )
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    data_emissao = models.DateTimeField(null=True, blank=True)
+    importado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-importado_em']
+
+    def __str__(self):
+        return f'NF-e {self.numero or self.chave_acesso}'
+
+
+class ItemNotaFiscalCompra(models.Model):
+    nota_fiscal = models.ForeignKey(NotaFiscalCompra, related_name='itens', on_delete=models.CASCADE)
+    numero_item = models.PositiveIntegerField()
+    codigo_produto_fornecedor = models.CharField(max_length=60, blank=True)
+    descricao = models.CharField(max_length=255)
+    quantidade = models.DecimalField(max_digits=12, decimal_places=4)
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=4)
+    produto = models.ForeignKey(
+        Produto, related_name='itens_nfe', on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    movimentacao = models.ForeignKey(
+        Movimentacao, related_name='+', on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    processado = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['numero_item']
+        unique_together = [('nota_fiscal', 'numero_item')]
+
+    def __str__(self):
+        return f'Item {self.numero_item} - {self.descricao}'

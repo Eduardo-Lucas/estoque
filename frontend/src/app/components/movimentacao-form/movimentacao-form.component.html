@@ -62,7 +62,7 @@
     <tbody>
       <tr *ngFor="let mov of movimentacoes">
         <td>{{ mov.produto_nome }}</td>
-        <td>{{ mov.tipo === 'REQUISICAO' ? 'Requisição' : 'Devolução' }}</td>
+        <td>{{ tipoLabels[mov.tipo] }}</td>
         <td>{{ mov.quantidade }}</td>
         <td>{{ mov.solicitante }}</td>
         <td>{{ mov.data | date:'dd/MM/yyyy HH:mm' }}</td>

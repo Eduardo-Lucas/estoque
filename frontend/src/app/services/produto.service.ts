@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Produto } from '../models/produto.model';
 import { ResultadoImportacao } from '../models/csv.model';
+import { ResultadoImportacaoNfe } from '../models/nfe.model';
 import { environment } from '../../environments/environment';
 
 const API_URL = `${environment.apiUrl}/produtos/`;
@@ -54,5 +55,12 @@ export class ProdutoService {
   // GET /api/produtos/exportar_csv/  -> exporta todos os produtos como CSV
   exportarCsv(): Observable<Blob> {
     return this.http.get(`${API_URL}exportar_csv/`, { responseType: 'blob' });
+  }
+
+  // POST /api/produtos/importar_nfe/  -> dá entrada em estoque a partir do XML de uma NF-e de compra
+  importarNfe(arquivo: File): Observable<ResultadoImportacaoNfe> {
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    return this.http.post<ResultadoImportacaoNfe>(`${API_URL}importar_nfe/`, formData);
   }
 }

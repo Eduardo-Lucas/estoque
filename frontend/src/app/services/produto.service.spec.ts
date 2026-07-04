@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { environment } from '../../environments/environment';
 import { Produto } from '../models/produto.model';
 import { ResultadoImportacao } from '../models/csv.model';
+import { ResultadoImportacaoNfe } from '../models/nfe.model';
 import { ProdutoService } from './produto.service';
 
 const API_URL = `${environment.apiUrl}/produtos/`;
@@ -103,5 +104,25 @@ describe('ProdutoService', () => {
     expect(req.request.method).toBe('GET');
     expect(req.request.responseType).toBe('blob');
     req.flush(blob);
+  });
+
+  it('envia o XML da NF-e como multipart no campo "arquivo"', () => {
+    const arquivo = new File(['<NFe></NFe>'], 'nfe.xml', { type: 'text/xml' });
+    const resultado: ResultadoImportacaoNfe = {
+      numero_nfe: '123',
+      fornecedor: 'Distribuidora ABC',
+      itens_processados: 1,
+      itens_ja_processados: 0,
+      nao_encontrados: [],
+      erros: [],
+    };
+
+    service.importarNfe(arquivo).subscribe((resposta) => expect(resposta).toEqual(resultado));
+
+    const req = httpMock.expectOne(`${API_URL}importar_nfe/`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBe(true);
+    expect((req.request.body as FormData).get('arquivo')).toBe(arquivo);
+    req.flush(resultado);
   });
 });

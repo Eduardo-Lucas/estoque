@@ -1,4 +1,10 @@
-export type TipoMovimentacao = 'REQUISICAO' | 'DEVOLUCAO';
+export type TipoMovimentacao = 'REQUISICAO' | 'DEVOLUCAO' | 'COMPRA';
+
+export const TIPO_MOVIMENTACAO_LABELS: Record<TipoMovimentacao, string> = {
+  REQUISICAO: 'Requisição',
+  DEVOLUCAO: 'Devolução',
+  COMPRA: 'Compra',
+};
 
 export interface Movimentacao {
   id?: number;
