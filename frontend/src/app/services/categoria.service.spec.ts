@@ -25,9 +25,17 @@ describe('CategoriaService', () => {
 
   it('lista categorias', () => {
     service.listar().subscribe((resposta) => expect(resposta.results).toEqual([categoria]));
-    const req = httpMock.expectOne(API_URL);
+    const req = httpMock.expectOne((r) => r.url === API_URL);
     expect(req.request.method).toBe('GET');
+    expect(req.request.params.has('nome')).toBe(false);
     req.flush({ count: 1, next: null, previous: null, results: [categoria] });
+  });
+
+  it('envia o filtro de nome quando informado', () => {
+    service.listar({ nome: 'ferrag' }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.get('nome')).toBe('ferrag');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
   });
 
   it('cria uma categoria via POST', () => {

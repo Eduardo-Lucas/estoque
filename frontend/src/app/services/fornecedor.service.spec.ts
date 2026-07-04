@@ -25,9 +25,17 @@ describe('FornecedorService', () => {
 
   it('lista fornecedores', () => {
     service.listar().subscribe((resposta) => expect(resposta.results).toEqual([fornecedor]));
-    const req = httpMock.expectOne(API_URL);
+    const req = httpMock.expectOne((r) => r.url === API_URL);
     expect(req.request.method).toBe('GET');
+    expect(req.request.params.has('nome')).toBe(false);
     req.flush({ count: 1, next: null, previous: null, results: [fornecedor] });
+  });
+
+  it('envia o filtro de nome quando informado', () => {
+    service.listar({ nome: 'abc' }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.get('nome')).toBe('abc');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
   });
 
   it('cria um fornecedor via POST', () => {

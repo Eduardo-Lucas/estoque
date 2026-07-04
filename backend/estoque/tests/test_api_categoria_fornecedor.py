@@ -60,6 +60,23 @@ class TestCategoriaApi:
         assert 'nome,descricao' in conteudo
         assert categoria.nome in conteudo
 
+    def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, categoria):
+        Categoria.objects.create(nome='Elétrica')
+
+        resposta = api_client.get(reverse('categoria-list'), {'nome': 'ferrag'})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == categoria.nome
+
+    def test_filtro_por_nome_sem_correspondencia_retorna_vazio(self, api_client, categoria):
+        resposta = api_client.get(reverse('categoria-list'), {'nome': 'inexistente'})
+        assert resposta.data['count'] == 0
+
+    def test_sem_filtro_retorna_todas(self, api_client, categoria):
+        Categoria.objects.create(nome='Elétrica')
+        resposta = api_client.get(reverse('categoria-list'))
+        assert resposta.data['count'] == 2
+
 
 class TestFornecedorApi:
     def test_criar_fornecedor(self, api_client):
@@ -96,6 +113,23 @@ class TestFornecedorApi:
         resposta = api_client.get(reverse('fornecedor-exportar-csv'))
         assert resposta.status_code == status.HTTP_200_OK
         assert fornecedor.nome in resposta.content.decode('utf-8')
+
+    def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, fornecedor):
+        Fornecedor.objects.create(nome='Distribuidora XYZ')
+
+        resposta = api_client.get(reverse('fornecedor-list'), {'nome': 'abc'})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == fornecedor.nome
+
+    def test_filtro_por_nome_sem_correspondencia_retorna_vazio(self, api_client, fornecedor):
+        resposta = api_client.get(reverse('fornecedor-list'), {'nome': 'inexistente'})
+        assert resposta.data['count'] == 0
+
+    def test_sem_filtro_retorna_todos(self, api_client, fornecedor):
+        Fornecedor.objects.create(nome='Distribuidora XYZ')
+        resposta = api_client.get(reverse('fornecedor-list'))
+        assert resposta.data['count'] == 2
 
 
 def _arquivo_csv(nome, conteudo_bytes):

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Fornecedor } from '../models/fornecedor.model';
 import { ResultadoImportacao } from '../models/csv.model';
@@ -18,8 +18,13 @@ interface Paginado<T> {
 export class FornecedorService {
   constructor(private http: HttpClient) {}
 
-  listar(): Observable<Paginado<Fornecedor>> {
-    return this.http.get<Paginado<Fornecedor>>(API_URL);
+  // GET /api/fornecedores/?nome=  -> lista de fornecedores, com filtro de busca opcional por nome
+  listar(filtros?: { nome?: string }): Observable<Paginado<Fornecedor>> {
+    let params = new HttpParams();
+    if (filtros?.nome) {
+      params = params.set('nome', filtros.nome);
+    }
+    return this.http.get<Paginado<Fornecedor>>(API_URL, { params });
   }
 
   criar(fornecedor: Fornecedor): Observable<Fornecedor> {

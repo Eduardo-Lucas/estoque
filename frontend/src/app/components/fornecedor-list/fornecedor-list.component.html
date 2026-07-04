@@ -9,6 +9,16 @@
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
 
+  <div class="filtros-busca">
+    <input
+      type="text"
+      placeholder="Buscar por nome..."
+      [value]="filtroNome"
+      (input)="alterarFiltroNome($event)"
+    >
+    <button type="button" class="secondary" *ngIf="temFiltroAtivo" (click)="limparFiltro()">Limpar filtro</button>
+  </div>
+
   <p *ngIf="carregando">Carregando...</p>
 
   <table *ngIf="!carregando">
@@ -39,7 +49,7 @@
         </td>
       </tr>
       <tr *ngIf="fornecedores.length === 0">
-        <td colspan="5">Nenhum fornecedor cadastrado ainda.</td>
+        <td colspan="5">{{ temFiltroAtivo ? 'Nenhum fornecedor encontrado para o filtro aplicado.' : 'Nenhum fornecedor cadastrado ainda.' }}</td>
       </tr>
     </tbody>
   </table>

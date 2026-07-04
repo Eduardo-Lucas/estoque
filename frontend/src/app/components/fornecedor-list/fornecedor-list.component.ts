@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Fornecedor } from '../../models/fornecedor.model';
@@ -11,7 +11,7 @@ import { FornecedorService } from '../../services/fornecedor.service';
   templateUrl: './fornecedor-list.component.html',
   styleUrl: './fornecedor-list.component.css',
 })
-export class FornecedorListComponent implements OnInit {
+export class FornecedorListComponent implements OnInit, OnDestroy {
   private fornecedorService = inject(FornecedorService);
   private router = inject(Router);
 
@@ -22,13 +22,24 @@ export class FornecedorListComponent implements OnInit {
 
   fornecedorParaRemover: Fornecedor | null = null;
 
+  filtroNome = '';
+  private debounceFiltroNome?: ReturnType<typeof setTimeout>;
+
+  get temFiltroAtivo(): boolean {
+    return !!this.filtroNome;
+  }
+
   ngOnInit(): void {
     this.carregar();
   }
 
+  ngOnDestroy(): void {
+    clearTimeout(this.debounceFiltroNome);
+  }
+
   carregar(): void {
     this.carregando = true;
-    this.fornecedorService.listar().subscribe({
+    this.fornecedorService.listar({ nome: this.filtroNome }).subscribe({
       next: (resposta) => {
         this.fornecedores = resposta.results;
         this.carregando = false;
@@ -38,6 +49,17 @@ export class FornecedorListComponent implements OnInit {
         this.carregando = false;
       },
     });
+  }
+
+  alterarFiltroNome(event: Event): void {
+    this.filtroNome = (event.target as HTMLInputElement).value;
+    clearTimeout(this.debounceFiltroNome);
+    this.debounceFiltroNome = setTimeout(() => this.carregar(), 300);
+  }
+
+  limparFiltro(): void {
+    this.filtroNome = '';
+    this.carregar();
   }
 
   criarFornecedor(): void {
