@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -5,6 +7,8 @@ from rest_framework import status
 from estoque.models import Categoria, Fornecedor
 
 pytestmark = pytest.mark.django_db
+
+EXEMPLOS_CSV_DIR = Path(__file__).resolve().parents[3] / 'exemplos-csv'
 
 
 class TestCategoriaApi:
@@ -60,6 +64,16 @@ class TestCategoriaApi:
         assert 'nome,descricao' in conteudo
         assert categoria.nome in conteudo
 
+    def test_importar_csv_de_exemplo_do_repositorio(self, api_client):
+        conteudo = (EXEMPLOS_CSV_DIR / 'categorias.csv').read_bytes()
+        arquivo = _arquivo_csv('categorias.csv', conteudo)
+        resposta = api_client.post(reverse('categoria-importar-csv'), {'arquivo': arquivo}, format='multipart')
+
+        assert resposta.status_code == status.HTTP_200_OK
+        assert resposta.data['criados'] == 10
+        assert resposta.data['atualizados'] == 0
+        assert Categoria.objects.get(nome='Ferragens').descricao == 'Parafusos, porcas e afins'
+
     def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, categoria):
         Categoria.objects.create(nome='Elétrica')
 
@@ -113,6 +127,16 @@ class TestFornecedorApi:
         resposta = api_client.get(reverse('fornecedor-exportar-csv'))
         assert resposta.status_code == status.HTTP_200_OK
         assert fornecedor.nome in resposta.content.decode('utf-8')
+
+    def test_importar_csv_de_exemplo_do_repositorio(self, api_client):
+        conteudo = (EXEMPLOS_CSV_DIR / 'fornecedores.csv').read_bytes()
+        arquivo = _arquivo_csv('fornecedores.csv', conteudo)
+        resposta = api_client.post(reverse('fornecedor-importar-csv'), {'arquivo': arquivo}, format='multipart')
+
+        assert resposta.status_code == status.HTTP_200_OK
+        assert resposta.data['criados'] == 10
+        assert resposta.data['atualizados'] == 0
+        assert Fornecedor.objects.get(nome='Distribuidora ABC Ltda').cnpj == '12.345.678/0001-99'
 
     def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, fornecedor):
         Fornecedor.objects.create(nome='Distribuidora XYZ')
