@@ -476,9 +476,16 @@ class ProdutoViewSet(viewsets.ModelViewSet):
 
 
 class CategoriaViewSet(viewsets.ModelViewSet):
-    """CRUD de categorias de produto."""
+    """CRUD de categorias de produto. GET aceita ?nome=<texto> para filtrar."""
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        nome = self.request.query_params.get('nome')
+        if nome:
+            queryset = queryset.filter(nome__icontains=nome)
+        return queryset
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
     def importar_csv(self, request):
@@ -500,9 +507,16 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
 
 class FornecedorViewSet(viewsets.ModelViewSet):
-    """CRUD de fornecedores."""
+    """CRUD de fornecedores. GET aceita ?nome=<texto> para filtrar."""
     queryset = Fornecedor.objects.all()
     serializer_class = FornecedorSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        nome = self.request.query_params.get('nome')
+        if nome:
+            queryset = queryset.filter(nome__icontains=nome)
+        return queryset
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
     def importar_csv(self, request):

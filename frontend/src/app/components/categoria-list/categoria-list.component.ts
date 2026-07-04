@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Categoria } from '../../models/categoria.model';
@@ -11,7 +11,7 @@ import { CategoriaService } from '../../services/categoria.service';
   templateUrl: './categoria-list.component.html',
   styleUrl: './categoria-list.component.css',
 })
-export class CategoriaListComponent implements OnInit {
+export class CategoriaListComponent implements OnInit, OnDestroy {
   private categoriaService = inject(CategoriaService);
   private router = inject(Router);
 
@@ -22,13 +22,24 @@ export class CategoriaListComponent implements OnInit {
 
   categoriaParaRemover: Categoria | null = null;
 
+  filtroNome = '';
+  private debounceFiltroNome?: ReturnType<typeof setTimeout>;
+
+  get temFiltroAtivo(): boolean {
+    return !!this.filtroNome;
+  }
+
   ngOnInit(): void {
     this.carregar();
   }
 
+  ngOnDestroy(): void {
+    clearTimeout(this.debounceFiltroNome);
+  }
+
   carregar(): void {
     this.carregando = true;
-    this.categoriaService.listar().subscribe({
+    this.categoriaService.listar({ nome: this.filtroNome }).subscribe({
       next: (resposta) => {
         this.categorias = resposta.results;
         this.carregando = false;
@@ -38,6 +49,17 @@ export class CategoriaListComponent implements OnInit {
         this.carregando = false;
       },
     });
+  }
+
+  alterarFiltroNome(event: Event): void {
+    this.filtroNome = (event.target as HTMLInputElement).value;
+    clearTimeout(this.debounceFiltroNome);
+    this.debounceFiltroNome = setTimeout(() => this.carregar(), 300);
+  }
+
+  limparFiltro(): void {
+    this.filtroNome = '';
+    this.carregar();
   }
 
   criarCategoria(): void {

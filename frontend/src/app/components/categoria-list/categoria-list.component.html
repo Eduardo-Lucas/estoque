@@ -9,6 +9,16 @@
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
 
+  <div class="filtros-busca">
+    <input
+      type="text"
+      placeholder="Buscar por nome..."
+      [value]="filtroNome"
+      (input)="alterarFiltroNome($event)"
+    >
+    <button type="button" class="secondary" *ngIf="temFiltroAtivo" (click)="limparFiltro()">Limpar filtro</button>
+  </div>
+
   <p *ngIf="carregando">Carregando...</p>
 
   <table *ngIf="!carregando">
@@ -35,7 +45,7 @@
         </td>
       </tr>
       <tr *ngIf="categorias.length === 0">
-        <td colspan="3">Nenhuma categoria cadastrada ainda.</td>
+        <td colspan="3">{{ temFiltroAtivo ? 'Nenhuma categoria encontrada para o filtro aplicado.' : 'Nenhuma categoria cadastrada ainda.' }}</td>
       </tr>
     </tbody>
   </table>

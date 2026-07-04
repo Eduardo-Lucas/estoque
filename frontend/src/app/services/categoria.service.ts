@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Categoria } from '../models/categoria.model';
 import { ResultadoImportacao } from '../models/csv.model';
@@ -18,8 +18,13 @@ interface Paginado<T> {
 export class CategoriaService {
   constructor(private http: HttpClient) {}
 
-  listar(): Observable<Paginado<Categoria>> {
-    return this.http.get<Paginado<Categoria>>(API_URL);
+  // GET /api/categorias/?nome=  -> lista de categorias, com filtro de busca opcional por nome
+  listar(filtros?: { nome?: string }): Observable<Paginado<Categoria>> {
+    let params = new HttpParams();
+    if (filtros?.nome) {
+      params = params.set('nome', filtros.nome);
+    }
+    return this.http.get<Paginado<Categoria>>(API_URL, { params });
   }
 
   criar(categoria: Categoria): Observable<Categoria> {

@@ -60,6 +60,9 @@ estoque/
   sem diferenciar maiúsculas/minúsculas, com debounce de 300ms no campo de
   texto) e por categoria/fornecedor (selects), combináveis entre si
   (`GET /api/produtos/?nome=&categoria=<id>&fornecedor=<id>`).
+- **Filtro de busca por nome nas listagens de Categoria e Fornecedor**: mesmo
+  padrão de busca parcial/case-insensitive com debounce de 300ms
+  (`GET /api/categorias/?nome=`, `GET /api/fornecedores/?nome=`).
 
 ### Padrão de telas
 
@@ -91,8 +94,10 @@ obrigatória, exceto `POST /api/auth/token/`):
 - `POST /api/produtos/importar_csv/`, `GET /api/produtos/exportar_csv/`
 - `POST /api/produtos/importar_nfe/` — dá entrada em estoque a partir do XML de uma NF-e de compra
 - `GET/POST /api/categorias/`, `GET/PUT/DELETE /api/categorias/{id}/`
+  (`GET` aceita `?nome=` para filtrar)
 - `POST /api/categorias/importar_csv/`, `GET /api/categorias/exportar_csv/`
 - `GET/POST /api/fornecedores/`, `GET/PUT/DELETE /api/fornecedores/{id}/`
+  (`GET` aceita `?nome=` para filtrar)
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
 - `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto
 - `POST /api/auth/token/` — login, retorna o token do usuário
