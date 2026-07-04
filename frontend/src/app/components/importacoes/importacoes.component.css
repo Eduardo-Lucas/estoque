@@ -1,0 +1,20 @@
+h2 { margin-top: 0; font-size: 1.05rem; }
+
+.hint {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 0;
+}
+
+.hint code {
+  background: #f3f4f6;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+.csv-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

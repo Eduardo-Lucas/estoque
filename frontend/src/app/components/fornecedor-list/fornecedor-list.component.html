@@ -1,39 +1,11 @@
 <section class="card">
   <div class="secao-header">
-    <h2>Importar / exportar fornecedores (CSV)</h2>
+    <h2>Fornecedores cadastrados</h2>
     <button type="button" (click)="criarFornecedor()">+ Criar fornecedor</button>
   </div>
-  <p class="hint">Cabeçalho esperado: <code>nome,cnpj,telefone,email,endereco</code> (separador vírgula ou ponto e vírgula).</p>
-  <p class="hint">Se já existir um fornecedor com o mesmo nome, os dados são atualizados; caso contrário, o fornecedor é criado.</p>
 
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
-
-  <div class="alert alert-error" *ngIf="resultadoImportacao?.erros?.length">
-    {{ resultadoImportacao!.erros.length }} linha(s) com erro:
-    <ul>
-      <li *ngFor="let linhaComErro of resultadoImportacao!.erros">
-        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
-      </li>
-    </ul>
-  </div>
-
-  <div class="csv-actions">
-    <input
-      type="file"
-      accept=".csv,text/csv"
-      [disabled]="importando"
-      (change)="importarCsv($event)"
-    >
-    <button type="button" class="secondary" [disabled]="exportando" (click)="exportarCsv()">
-      {{ exportando ? 'Baixando...' : 'Baixar CSV' }}
-    </button>
-  </div>
-  <p *ngIf="importando">Importando...</p>
-</section>
-
-<section class="card">
-  <h2>Fornecedores cadastrados</h2>
 
   <p *ngIf="carregando">Carregando...</p>
 

@@ -2,7 +2,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Categoria } from '../../models/categoria.model';
-import { ResultadoImportacao } from '../../models/csv.model';
 import { CategoriaService } from '../../services/categoria.service';
 
 @Component({
@@ -22,10 +21,6 @@ export class CategoriaListComponent implements OnInit {
   sucesso = '';
 
   categoriaParaRemover: Categoria | null = null;
-
-  importando = false;
-  exportando = false;
-  resultadoImportacao: ResultadoImportacao | null = null;
 
   ngOnInit(): void {
     this.carregar();
@@ -51,53 +46,6 @@ export class CategoriaListComponent implements OnInit {
 
   editar(categoria: Categoria): void {
     this.router.navigate(['/categorias', categoria.id, 'editar']);
-  }
-
-  importarCsv(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const arquivo = input.files?.[0];
-    if (!arquivo) return;
-
-    this.erro = '';
-    this.sucesso = '';
-    this.resultadoImportacao = null;
-    this.importando = true;
-
-    this.categoriaService.importarCsv(arquivo).subscribe({
-      next: (resultado) => {
-        this.importando = false;
-        this.resultadoImportacao = resultado;
-        this.sucesso = `${resultado.criados} categoria(s) criada(s), ${resultado.atualizados} atualizada(s).`;
-        this.carregar();
-        input.value = '';
-      },
-      error: (err) => {
-        this.importando = false;
-        this.erro = err.message;
-        input.value = '';
-      },
-    });
-  }
-
-  exportarCsv(): void {
-    this.erro = '';
-    this.exportando = true;
-
-    this.categoriaService.exportarCsv().subscribe({
-      next: (blob) => {
-        this.exportando = false;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'categorias.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        this.exportando = false;
-        this.erro = err.message;
-      },
-    });
   }
 
   pedirRemocao(categoria: Categoria): void {
