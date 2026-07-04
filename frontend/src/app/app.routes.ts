@@ -7,6 +7,7 @@ import { CategoriaFormComponent } from './components/categoria-form/categoria-fo
 import { FornecedorListComponent } from './components/fornecedor-list/fornecedor-list.component';
 import { FornecedorFormComponent } from './components/fornecedor-form/fornecedor-form.component';
 import { MovimentacaoFormComponent } from './components/movimentacao-form/movimentacao-form.component';
+import { ImportacoesComponent } from './components/importacoes/importacoes.component';
 import { LoginComponent } from './components/login/login.component';
 import { authGuard } from './guards/auth.guard';
 
@@ -24,5 +25,6 @@ export const routes: Routes = [
   { path: 'fornecedores/novo', component: FornecedorFormComponent, canActivate: [authGuard] },
   { path: 'fornecedores/:id/editar', component: FornecedorFormComponent, canActivate: [authGuard] },
   { path: 'movimentacoes', component: MovimentacaoFormComponent, canActivate: [authGuard] },
+  { path: 'importacoes', component: ImportacoesComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: 'produtos' },
 ];

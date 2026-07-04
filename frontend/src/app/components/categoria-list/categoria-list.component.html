@@ -1,39 +1,11 @@
 <section class="card">
   <div class="secao-header">
-    <h2>Importar / exportar categorias (CSV)</h2>
+    <h2>Categorias cadastradas</h2>
     <button type="button" (click)="criarCategoria()">+ Criar categoria</button>
   </div>
-  <p class="hint">Cabeçalho esperado: <code>nome,descricao</code> (separador vírgula ou ponto e vírgula).</p>
-  <p class="hint">Se já existir uma categoria com o mesmo nome, a descrição é atualizada; caso contrário, a categoria é criada.</p>
 
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
-
-  <div class="alert alert-error" *ngIf="resultadoImportacao?.erros?.length">
-    {{ resultadoImportacao!.erros.length }} linha(s) com erro:
-    <ul>
-      <li *ngFor="let linhaComErro of resultadoImportacao!.erros">
-        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
-      </li>
-    </ul>
-  </div>
-
-  <div class="csv-actions">
-    <input
-      type="file"
-      accept=".csv,text/csv"
-      [disabled]="importando"
-      (change)="importarCsv($event)"
-    >
-    <button type="button" class="secondary" [disabled]="exportando" (click)="exportarCsv()">
-      {{ exportando ? 'Baixando...' : 'Baixar CSV' }}
-    </button>
-  </div>
-  <p *ngIf="importando">Importando...</p>
-</section>
-
-<section class="card">
-  <h2>Categorias cadastradas</h2>
 
   <p *ngIf="carregando">Carregando...</p>
 

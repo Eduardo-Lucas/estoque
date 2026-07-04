@@ -11,9 +11,6 @@ describe('ProdutoListComponent', () => {
   let produtoService: {
     listar: jest.Mock;
     remover: jest.Mock;
-    importarCsv: jest.Mock;
-    exportarCsv: jest.Mock;
-    importarNfe: jest.Mock;
   };
   let navigate: jest.SpyInstance;
 
@@ -36,9 +33,6 @@ describe('ProdutoListComponent', () => {
     produtoService = {
       listar: jest.fn().mockReturnValue(of(respostaPaginada([produto]))),
       remover: jest.fn().mockReturnValue(of(undefined)),
-      importarCsv: jest.fn(),
-      exportarCsv: jest.fn(),
-      importarNfe: jest.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -140,124 +134,6 @@ describe('ProdutoListComponent', () => {
 
       expect(component.erro).toBe('falha ao remover');
       expect(component.produtoParaRemover).toBeNull();
-    });
-  });
-
-  describe('importação CSV', () => {
-    function eventoComArquivo(arquivo: File | undefined): Event {
-      const input = document.createElement('input');
-      Object.defineProperty(input, 'files', { value: arquivo ? [arquivo] : [] });
-      return { target: input } as unknown as Event;
-    }
-
-    it('importa o csv selecionado e recarrega a lista', () => {
-      const resultado = { criados: 2, atualizados: 1, erros: [] };
-      produtoService.importarCsv.mockReturnValue(of(resultado));
-      const arquivo = new File(['nome,quantidade\nX,1'], 'produtos.csv');
-
-      component.importarCsv(eventoComArquivo(arquivo));
-
-      expect(produtoService.importarCsv).toHaveBeenCalledWith(arquivo);
-      expect(component.resultadoImportacao).toEqual(resultado);
-      expect(component.sucesso).toBe('2 produto(s) criado(s), 1 atualizado(s).');
-      expect(component.importando).toBe(false);
-    });
-
-    it('não faz nada quando nenhum arquivo é selecionado', () => {
-      component.importarCsv(eventoComArquivo(undefined));
-      expect(produtoService.importarCsv).not.toHaveBeenCalled();
-    });
-
-    it('trata erro de importação', () => {
-      produtoService.importarCsv.mockReturnValue(throwError(() => new Error('csv inválido')));
-      const arquivo = new File(['x'], 'produtos.csv');
-
-      component.importarCsv(eventoComArquivo(arquivo));
-
-      expect(component.erro).toBe('csv inválido');
-      expect(component.importando).toBe(false);
-    });
-  });
-
-  describe('importação de NF-e', () => {
-    function eventoComArquivo(arquivo: File | undefined): Event {
-      const input = document.createElement('input');
-      Object.defineProperty(input, 'files', { value: arquivo ? [arquivo] : [] });
-      return { target: input } as unknown as Event;
-    }
-
-    it('importa o XML selecionado, mostra o resumo e recarrega a lista', () => {
-      const resultado = {
-        numero_nfe: '123',
-        fornecedor: 'Distribuidora ABC',
-        itens_processados: 2,
-        itens_ja_processados: 1,
-        nao_encontrados: [],
-        erros: [],
-      };
-      produtoService.importarNfe.mockReturnValue(of(resultado));
-      const arquivo = new File(['<NFe></NFe>'], 'nfe.xml');
-
-      component.importarNfe(eventoComArquivo(arquivo));
-
-      expect(produtoService.importarNfe).toHaveBeenCalledWith(arquivo);
-      expect(component.resultadoImportacaoNfe).toEqual(resultado);
-      expect(component.sucesso).toContain('123');
-      expect(component.sucesso).toContain('Distribuidora ABC');
-      expect(component.sucesso).toContain('2 item(ns) processado(s)');
-      expect(component.importandoNfe).toBe(false);
-    });
-
-    it('não faz nada quando nenhum arquivo é selecionado', () => {
-      component.importarNfe(eventoComArquivo(undefined));
-      expect(produtoService.importarNfe).not.toHaveBeenCalled();
-    });
-
-    it('trata erro de importação', () => {
-      produtoService.importarNfe.mockReturnValue(throwError(() => new Error('XML inválido')));
-      const arquivo = new File(['x'], 'nfe.xml');
-
-      component.importarNfe(eventoComArquivo(arquivo));
-
-      expect(component.erro).toBe('XML inválido');
-      expect(component.importandoNfe).toBe(false);
-    });
-  });
-
-  describe('exportação CSV', () => {
-    let createObjectURL: jest.Mock;
-    let revokeObjectURL: jest.Mock;
-    let clickSpy: jest.SpyInstance;
-
-    beforeEach(() => {
-      createObjectURL = jest.fn().mockReturnValue('blob:mock-url');
-      revokeObjectURL = jest.fn();
-      (URL as any).createObjectURL = createObjectURL;
-      (URL as any).revokeObjectURL = revokeObjectURL;
-      clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    });
-
-    afterEach(() => clickSpy.mockRestore());
-
-    it('exporta o csv disparando o download', () => {
-      const blob = new Blob(['nome,quantidade\n']);
-      produtoService.exportarCsv.mockReturnValue(of(blob));
-
-      component.exportarCsv();
-
-      expect(createObjectURL).toHaveBeenCalledWith(blob);
-      expect(clickSpy).toHaveBeenCalled();
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-      expect(component.exportando).toBe(false);
-    });
-
-    it('trata erro de exportação', () => {
-      produtoService.exportarCsv.mockReturnValue(throwError(() => new Error('erro ao exportar')));
-
-      component.exportarCsv();
-
-      expect(component.erro).toBe('erro ao exportar');
-      expect(component.exportando).toBe(false);
     });
   });
 });

@@ -1,0 +1,116 @@
+<section class="card">
+  <h2>Produtos — importar / exportar (CSV)</h2>
+  <p class="hint">
+    Colunas obrigatórias: <code>nome,quantidade</code>. Colunas opcionais:
+    <code>sku,codigo_barras,categoria,fornecedor,unidade_medida,estoque_minimo,preco_custo,preco,ativo,descricao</code>
+    (separador vírgula ou ponto e vírgula).
+  </p>
+  <p class="hint">Categoria e fornecedor são identificados pelo nome; se não existirem, são criados automaticamente.</p>
+  <p class="hint">Se já existir um produto com o mesmo nome, os campos presentes na linha são atualizados (células vazias não sobrescrevem valores já cadastrados); caso contrário, o produto é criado.</p>
+
+  <div class="alert alert-error" *ngIf="produtoCsv.erro">{{ produtoCsv.erro }}</div>
+  <div class="alert alert-success" *ngIf="produtoCsv.sucesso">{{ produtoCsv.sucesso }}</div>
+  <div class="alert alert-error" *ngIf="produtoCsv.resultado?.erros?.length">
+    {{ produtoCsv.resultado!.erros.length }} linha(s) com erro:
+    <ul>
+      <li *ngFor="let linhaComErro of produtoCsv.resultado!.erros">
+        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="csv-actions">
+    <input type="file" accept=".csv,text/csv" [disabled]="produtoCsv.importando" (change)="importarProdutoCsv($event)">
+    <button type="button" class="secondary" [disabled]="produtoCsv.exportando" (click)="exportarProdutoCsv()">
+      {{ produtoCsv.exportando ? 'Baixando...' : 'Baixar CSV' }}
+    </button>
+  </div>
+  <p *ngIf="produtoCsv.importando">Importando...</p>
+</section>
+
+<section class="card">
+  <h2>Produtos — importar nota fiscal (XML)</h2>
+  <p class="hint">
+    Dá entrada em estoque a partir do XML da NF-e de compra. Itens são casados
+    com produtos existentes por SKU (código do fornecedor) ou nome — itens sem
+    correspondência não criam produto novo: cadastre o produto manualmente e
+    reimporte o mesmo arquivo depois.
+  </p>
+  <p class="hint">Reimportar o mesmo arquivo é seguro: itens já processados não duplicam estoque.</p>
+
+  <div class="alert alert-error" *ngIf="produtoNfe.erro">{{ produtoNfe.erro }}</div>
+  <div class="alert alert-success" *ngIf="produtoNfe.sucesso">{{ produtoNfe.sucesso }}</div>
+
+  <div class="alert alert-error" *ngIf="produtoNfe.resultado?.nao_encontrados?.length">
+    {{ produtoNfe.resultado!.nao_encontrados.length }} item(ns) sem produto correspondente:
+    <ul>
+      <li *ngFor="let pendente of produtoNfe.resultado!.nao_encontrados">
+        Item {{ pendente.item }}: "{{ pendente.descricao }}" (código do fornecedor: {{ pendente.codigo_fornecedor || '-' }})
+      </li>
+    </ul>
+  </div>
+
+  <div class="alert alert-error" *ngIf="produtoNfe.resultado?.erros?.length">
+    {{ produtoNfe.resultado!.erros.length }} item(ns) com erro:
+    <ul>
+      <li *ngFor="let erroItem of produtoNfe.resultado!.erros">
+        Item {{ erroItem.item }}: {{ erroItem.mensagem }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="csv-actions">
+    <input type="file" accept=".xml,text/xml,application/xml" [disabled]="produtoNfe.importando" (change)="importarProdutoNfe($event)">
+  </div>
+  <p *ngIf="produtoNfe.importando">Importando...</p>
+</section>
+
+<section class="card">
+  <h2>Categorias — importar / exportar (CSV)</h2>
+  <p class="hint">Cabeçalho esperado: <code>nome,descricao</code> (separador vírgula ou ponto e vírgula).</p>
+  <p class="hint">Se já existir uma categoria com o mesmo nome, a descrição é atualizada; caso contrário, a categoria é criada.</p>
+
+  <div class="alert alert-error" *ngIf="categoriaCsv.erro">{{ categoriaCsv.erro }}</div>
+  <div class="alert alert-success" *ngIf="categoriaCsv.sucesso">{{ categoriaCsv.sucesso }}</div>
+  <div class="alert alert-error" *ngIf="categoriaCsv.resultado?.erros?.length">
+    {{ categoriaCsv.resultado!.erros.length }} linha(s) com erro:
+    <ul>
+      <li *ngFor="let linhaComErro of categoriaCsv.resultado!.erros">
+        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="csv-actions">
+    <input type="file" accept=".csv,text/csv" [disabled]="categoriaCsv.importando" (change)="importarCategoriaCsv($event)">
+    <button type="button" class="secondary" [disabled]="categoriaCsv.exportando" (click)="exportarCategoriaCsv()">
+      {{ categoriaCsv.exportando ? 'Baixando...' : 'Baixar CSV' }}
+    </button>
+  </div>
+  <p *ngIf="categoriaCsv.importando">Importando...</p>
+</section>
+
+<section class="card">
+  <h2>Fornecedores — importar / exportar (CSV)</h2>
+  <p class="hint">Cabeçalho esperado: <code>nome,cnpj,telefone,email,endereco</code> (separador vírgula ou ponto e vírgula).</p>
+  <p class="hint">Se já existir um fornecedor com o mesmo nome, os dados são atualizados; caso contrário, o fornecedor é criado.</p>
+
+  <div class="alert alert-error" *ngIf="fornecedorCsv.erro">{{ fornecedorCsv.erro }}</div>
+  <div class="alert alert-success" *ngIf="fornecedorCsv.sucesso">{{ fornecedorCsv.sucesso }}</div>
+  <div class="alert alert-error" *ngIf="fornecedorCsv.resultado?.erros?.length">
+    {{ fornecedorCsv.resultado!.erros.length }} linha(s) com erro:
+    <ul>
+      <li *ngFor="let linhaComErro of fornecedorCsv.resultado!.erros">
+        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="csv-actions">
+    <input type="file" accept=".csv,text/csv" [disabled]="fornecedorCsv.importando" (change)="importarFornecedorCsv($event)">
+    <button type="button" class="secondary" [disabled]="fornecedorCsv.exportando" (click)="exportarFornecedorCsv()">
+      {{ fornecedorCsv.exportando ? 'Baixando...' : 'Baixar CSV' }}
+    </button>
+  </div>
+  <p *ngIf="fornecedorCsv.importando">Importando...</p>
+</section>

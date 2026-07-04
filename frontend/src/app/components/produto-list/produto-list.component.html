@@ -1,83 +1,11 @@
 <section class="card">
   <div class="secao-header">
-    <h2>Importar / exportar produtos (CSV)</h2>
+    <h2>Produtos em estoque</h2>
     <button type="button" (click)="criarProduto()">+ Criar produto</button>
   </div>
-  <p class="hint">
-    Colunas obrigatórias: <code>nome,quantidade</code>. Colunas opcionais:
-    <code>sku,codigo_barras,categoria,fornecedor,unidade_medida,estoque_minimo,preco_custo,preco,ativo,descricao</code>
-    (separador vírgula ou ponto e vírgula).
-  </p>
-  <p class="hint">Categoria e fornecedor são identificados pelo nome; se não existirem, são criados automaticamente.</p>
-  <p class="hint">Se já existir um produto com o mesmo nome, os campos presentes na linha são atualizados (células vazias não sobrescrevem valores já cadastrados); caso contrário, o produto é criado.</p>
 
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
-
-  <div class="alert alert-error" *ngIf="resultadoImportacao?.erros?.length">
-    {{ resultadoImportacao!.erros.length }} linha(s) com erro:
-    <ul>
-      <li *ngFor="let linhaComErro of resultadoImportacao!.erros">
-        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
-      </li>
-    </ul>
-  </div>
-
-  <div class="csv-actions">
-    <input
-      type="file"
-      accept=".csv,text/csv"
-      [disabled]="importando"
-      (change)="importarCsv($event)"
-    >
-    <button type="button" class="secondary" [disabled]="exportando" (click)="exportarCsv()">
-      {{ exportando ? 'Baixando...' : 'Baixar CSV' }}
-    </button>
-  </div>
-  <p *ngIf="importando">Importando...</p>
-</section>
-
-<section class="card">
-  <h2>Importar nota fiscal (XML)</h2>
-  <p class="hint">
-    Dá entrada em estoque a partir do XML da NF-e de compra. Itens são casados
-    com produtos existentes por SKU (código do fornecedor) ou nome — itens sem
-    correspondência não criam produto novo: cadastre o produto manualmente e
-    reimporte o mesmo arquivo depois.
-  </p>
-  <p class="hint">Reimportar o mesmo arquivo é seguro: itens já processados não duplicam estoque.</p>
-
-  <div class="alert alert-error" *ngIf="resultadoImportacaoNfe?.nao_encontrados?.length">
-    {{ resultadoImportacaoNfe!.nao_encontrados.length }} item(ns) sem produto correspondente:
-    <ul>
-      <li *ngFor="let pendente of resultadoImportacaoNfe!.nao_encontrados">
-        Item {{ pendente.item }}: "{{ pendente.descricao }}" (código do fornecedor: {{ pendente.codigo_fornecedor || '-' }})
-      </li>
-    </ul>
-  </div>
-
-  <div class="alert alert-error" *ngIf="resultadoImportacaoNfe?.erros?.length">
-    {{ resultadoImportacaoNfe!.erros.length }} item(ns) com erro:
-    <ul>
-      <li *ngFor="let erroItem of resultadoImportacaoNfe!.erros">
-        Item {{ erroItem.item }}: {{ erroItem.mensagem }}
-      </li>
-    </ul>
-  </div>
-
-  <div class="csv-actions">
-    <input
-      type="file"
-      accept=".xml,text/xml,application/xml"
-      [disabled]="importandoNfe"
-      (change)="importarNfe($event)"
-    >
-  </div>
-  <p *ngIf="importandoNfe">Importando...</p>
-</section>
-
-<section class="card">
-  <h2>Produtos em estoque</h2>
 
   <div class="paginacao-controles">
     <label class="itens-por-pagina">

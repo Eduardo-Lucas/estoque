@@ -2,7 +2,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Fornecedor } from '../../models/fornecedor.model';
-import { ResultadoImportacao } from '../../models/csv.model';
 import { FornecedorService } from '../../services/fornecedor.service';
 
 @Component({
@@ -22,10 +21,6 @@ export class FornecedorListComponent implements OnInit {
   sucesso = '';
 
   fornecedorParaRemover: Fornecedor | null = null;
-
-  importando = false;
-  exportando = false;
-  resultadoImportacao: ResultadoImportacao | null = null;
 
   ngOnInit(): void {
     this.carregar();
@@ -51,53 +46,6 @@ export class FornecedorListComponent implements OnInit {
 
   editar(fornecedor: Fornecedor): void {
     this.router.navigate(['/fornecedores', fornecedor.id, 'editar']);
-  }
-
-  importarCsv(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const arquivo = input.files?.[0];
-    if (!arquivo) return;
-
-    this.erro = '';
-    this.sucesso = '';
-    this.resultadoImportacao = null;
-    this.importando = true;
-
-    this.fornecedorService.importarCsv(arquivo).subscribe({
-      next: (resultado) => {
-        this.importando = false;
-        this.resultadoImportacao = resultado;
-        this.sucesso = `${resultado.criados} fornecedor(es) criado(s), ${resultado.atualizados} atualizado(s).`;
-        this.carregar();
-        input.value = '';
-      },
-      error: (err) => {
-        this.importando = false;
-        this.erro = err.message;
-        input.value = '';
-      },
-    });
-  }
-
-  exportarCsv(): void {
-    this.erro = '';
-    this.exportando = true;
-
-    this.fornecedorService.exportarCsv().subscribe({
-      next: (blob) => {
-        this.exportando = false;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'fornecedores.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        this.exportando = false;
-        this.erro = err.message;
-      },
-    });
   }
 
   pedirRemocao(fornecedor: Fornecedor): void {
