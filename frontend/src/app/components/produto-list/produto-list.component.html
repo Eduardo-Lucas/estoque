@@ -75,6 +75,7 @@
           <span class="badge" [class.badge-inativo]="!produto.ativo">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</span>
         </td>
         <td>
+          <button class="secondary" (click)="verHistorico(produto)">Histórico</button>
           <button class="secondary" (click)="editar(produto)">Editar</button>
           <button class="danger" (click)="pedirRemocao(produto)">Remover</button>
         </td>

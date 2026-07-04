@@ -1,0 +1,76 @@
+<section class="card">
+  <div class="secao-header">
+    <h2>Detalhe do produto</h2>
+    <button type="button" class="secondary" (click)="voltar()">« Voltar para produtos</button>
+  </div>
+
+  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+  <p *ngIf="carregandoProduto">Carregando...</p>
+
+  <dl class="detalhe-grid" *ngIf="!carregandoProduto && produto as p">
+    <div>
+      <dt>Nome</dt>
+      <dd>{{ p.nome }}</dd>
+    </div>
+    <div>
+      <dt>SKU</dt>
+      <dd>{{ p.sku || '-' }}</dd>
+    </div>
+    <div>
+      <dt>Categoria</dt>
+      <dd>{{ p.categoria_nome || '-' }}</dd>
+    </div>
+    <div>
+      <dt>Fornecedor</dt>
+      <dd>{{ p.fornecedor_nome || '-' }}</dd>
+    </div>
+    <div>
+      <dt>Quantidade em estoque</dt>
+      <dd [class.estoque-baixo]="p.quantidade <= p.estoque_minimo">{{ p.quantidade }}</dd>
+    </div>
+    <div>
+      <dt>Estoque mínimo</dt>
+      <dd>{{ p.estoque_minimo }}</dd>
+    </div>
+    <div>
+      <dt>Preço de venda</dt>
+      <dd>R$ {{ p.preco }}</dd>
+    </div>
+    <div>
+      <dt>Status</dt>
+      <dd>
+        <span class="badge" [class.badge-inativo]="!p.ativo">{{ p.ativo ? 'Ativo' : 'Inativo' }}</span>
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Histórico de movimentações</h2>
+
+  <p *ngIf="carregandoMovimentacoes">Carregando...</p>
+
+  <table *ngIf="!carregandoMovimentacoes">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Solicitante</th>
+        <th>Observação</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let mov of movimentacoes">
+        <td>{{ mov.tipo === 'REQUISICAO' ? 'Requisição' : 'Devolução' }}</td>
+        <td>{{ mov.quantidade }}</td>
+        <td>{{ mov.solicitante }}</td>
+        <td>{{ mov.observacao || '-' }}</td>
+        <td>{{ mov.data | date:'dd/MM/yyyy HH:mm' }}</td>
+      </tr>
+      <tr *ngIf="movimentacoes.length === 0">
+        <td colspan="5">Nenhuma movimentação registrada para este produto ainda.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

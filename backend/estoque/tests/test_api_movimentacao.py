@@ -63,3 +63,22 @@ class TestMovimentacaoApi:
         )
         resposta = api_client.get(reverse('movimentacao-list'))
         assert resposta.data['results'][0]['produto_nome'] == produto.nome
+
+    def test_filtro_por_produto_retorna_apenas_suas_movimentacoes(self, api_client, produto, categoria, fornecedor):
+        outro_produto = Produto.objects.create(nome='Outro produto', categoria=categoria, fornecedor=fornecedor, quantidade=10)
+        Movimentacao.objects.create(produto=produto, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
+        Movimentacao.objects.create(produto=outro_produto, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
+
+        resposta = api_client.get(reverse('movimentacao-list'), {'produto': produto.id})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['produto'] == produto.id
+
+    def test_sem_filtro_retorna_movimentacoes_de_todos_os_produtos(self, api_client, produto, categoria, fornecedor):
+        outro_produto = Produto.objects.create(nome='Outro produto', categoria=categoria, fornecedor=fornecedor, quantidade=10)
+        Movimentacao.objects.create(produto=produto, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
+        Movimentacao.objects.create(produto=outro_produto, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
+
+        resposta = api_client.get(reverse('movimentacao-list'))
+
+        assert resposta.data['count'] == 2

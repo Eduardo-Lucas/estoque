@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { ProdutoListComponent } from './components/produto-list/produto-list.component';
 import { ProdutoFormComponent } from './components/produto-form/produto-form.component';
+import { ProdutoHistoricoComponent } from './components/produto-historico/produto-historico.component';
 import { CategoriaListComponent } from './components/categoria-list/categoria-list.component';
 import { CategoriaFormComponent } from './components/categoria-form/categoria-form.component';
 import { FornecedorListComponent } from './components/fornecedor-list/fornecedor-list.component';
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'produtos', component: ProdutoListComponent, canActivate: [authGuard] },
   { path: 'produtos/novo', component: ProdutoFormComponent, canActivate: [authGuard] },
   { path: 'produtos/:id/editar', component: ProdutoFormComponent, canActivate: [authGuard] },
+  { path: 'produtos/:id/historico', component: ProdutoHistoricoComponent, canActivate: [authGuard] },
   { path: 'categorias', component: CategoriaListComponent, canActivate: [authGuard] },
   { path: 'categorias/novo', component: CategoriaFormComponent, canActivate: [authGuard] },
   { path: 'categorias/:id/editar', component: CategoriaFormComponent, canActivate: [authGuard] },

@@ -88,6 +88,10 @@ export class ProdutoListComponent implements OnInit {
     this.router.navigate(['/produtos', produto.id, 'editar']);
   }
 
+  verHistorico(produto: Produto): void {
+    this.router.navigate(['/produtos', produto.id, 'historico']);
+  }
+
   importarCsv(event: Event): void {
     const input = event.target as HTMLInputElement;
     const arquivo = input.files?.[0];

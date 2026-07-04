@@ -351,6 +351,14 @@ class MovimentacaoViewSet(viewsets.ModelViewSet):
     queryset = Movimentacao.objects.select_related('produto').all()
     serializer_class = MovimentacaoSerializer
 
+    def get_queryset(self):
+        """GET /api/movimentacoes/?produto=<id> -> histórico de um produto específico"""
+        queryset = super().get_queryset()
+        produto_id = self.request.query_params.get('produto')
+        if produto_id:
+            queryset = queryset.filter(produto_id=produto_id)
+        return queryset
+
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
