@@ -55,6 +55,8 @@ estoque/
     pendentes até o produto ser cadastrado manualmente e o mesmo arquivo ser
     reimportado (reimportar é idempotente: itens já processados não duplicam
     estoque).
+  - Arquivos de exemplo para testar a importação de CSV em `exemplos-csv/`
+    (`categorias.csv`, `fornecedores.csv`).
 - **Paginação** nas listagens (a API aceita `?page=` e `?page_size=`).
 - **Filtros de busca na listagem de produtos**: por nome (busca parcial,
   sem diferenciar maiúsculas/minúsculas, com debounce de 300ms no campo de
