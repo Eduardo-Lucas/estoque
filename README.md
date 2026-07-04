@@ -1,6 +1,7 @@
 
 # Controle de Estoque — Angular + Django REST Framework
 
+![CI](https://github.com/Eduardo-Lucas/estoque/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-4.2-092E20?logo=django&logoColor=white)
 ![DRF](https://img.shields.io/badge/DRF-3.14+-a30000)
