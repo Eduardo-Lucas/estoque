@@ -122,6 +122,13 @@ Testes em arquivos `*.spec.ts` ao lado de cada arquivo testado: services
 componentes mais representativos (`produto-list`, `produto-form`, `login`,
 `movimentacao-form`, incluindo o `AsyncValidator` de estoque).
 
+### CI
+
+`.github/workflows/ci.yml` roda as duas suítes a cada push/PR para `main`:
+o job `backend-tests` (pytest-django) e o job `frontend-tests` (Jest +
+TestBed), em jobs separados e paralelos. O badge no topo do README reflete
+o status da última execução na `main`.
+
 ## Onde está o "como o frontend faz requisições"
 
 Esse é o objetivo do projeto, então vale destacar os arquivos certos:
@@ -175,5 +182,4 @@ Exemplo: registrar uma requisição de produto.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
-- Configurar CI (GitHub Actions) rodando as duas suítes de teste a cada push/PR.
 - Adicionar tela de detalhe/histórico de movimentações por produto.
