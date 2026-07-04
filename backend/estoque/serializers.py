@@ -1,11 +1,37 @@
 from rest_framework import serializers
-from .models import Produto, Movimentacao
+from .models import Produto, Categoria, Fornecedor, Movimentacao
+
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = ['id', 'nome', 'descricao']
+
+
+class FornecedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Fornecedor
+        fields = ['id', 'nome', 'cnpj', 'telefone', 'email', 'endereco']
 
 
 class ProdutoSerializer(serializers.ModelSerializer):
+    categoria_nome = serializers.SerializerMethodField()
+    fornecedor_nome = serializers.SerializerMethodField()
+
+    def get_categoria_nome(self, obj):
+        return obj.categoria.nome if obj.categoria_id else None
+
+    def get_fornecedor_nome(self, obj):
+        return obj.fornecedor.nome if obj.fornecedor_id else None
+
     class Meta:
         model = Produto
-        fields = ['id', 'nome', 'descricao', 'quantidade', 'preco', 'criado_em', 'atualizado_em']
+        fields = [
+            'id', 'nome', 'sku', 'codigo_barras', 'descricao',
+            'categoria', 'categoria_nome', 'fornecedor', 'fornecedor_nome',
+            'unidade_medida', 'quantidade', 'estoque_minimo',
+            'preco_custo', 'preco', 'ativo', 'criado_em', 'atualizado_em',
+        ]
         read_only_fields = ['criado_em', 'atualizado_em']
 
 

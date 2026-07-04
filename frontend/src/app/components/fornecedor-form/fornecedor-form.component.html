@@ -1,0 +1,39 @@
+<section class="card">
+  <h2>{{ emEdicao ? 'Editar fornecedor' : 'Criar fornecedor' }}</h2>
+
+  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+  <p *ngIf="carregando">Carregando...</p>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid" *ngIf="!carregando">
+    <div>
+      <label>Nome</label>
+      <input formControlName="nome" name="nome" placeholder="Ex: Distribuidora ABC">
+      <small class="field-error" *ngIf="form.get('nome')?.invalid && form.get('nome')?.touched">
+        Informe pelo menos 2 caracteres.
+      </small>
+    </div>
+    <div>
+      <label>CNPJ</label>
+      <input formControlName="cnpj" name="cnpj" placeholder="Opcional">
+    </div>
+    <div>
+      <label>Telefone</label>
+      <input formControlName="telefone" name="telefone" placeholder="Opcional">
+    </div>
+    <div>
+      <label>E-mail</label>
+      <input type="email" formControlName="email" name="email" placeholder="Opcional">
+      <small class="field-error" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">
+        Informe um e-mail válido.
+      </small>
+    </div>
+    <div>
+      <label>Endereço</label>
+      <input formControlName="endereco" name="endereco" placeholder="Opcional">
+    </div>
+    <div>
+      <button type="submit">{{ emEdicao ? 'Salvar alterações' : 'Adicionar fornecedor' }}</button>
+      <button type="button" class="secondary" (click)="cancelar()">Cancelar</button>
+    </div>
+  </form>
+</section>

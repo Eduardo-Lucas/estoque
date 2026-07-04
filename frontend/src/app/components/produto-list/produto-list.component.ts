@@ -1,19 +1,20 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Produto, ResultadoImportacao } from '../../models/produto.model';
+import { Router } from '@angular/router';
+import { Produto } from '../../models/produto.model';
+import { ResultadoImportacao } from '../../models/csv.model';
 import { ProdutoService } from '../../services/produto.service';
 
 @Component({
   selector: 'app-produto-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './produto-list.component.html',
   styleUrl: './produto-list.component.css',
 })
 export class ProdutoListComponent implements OnInit {
-  private fb = inject(FormBuilder);
   private produtoService = inject(ProdutoService);
+  private router = inject(Router);
 
   produtos: Produto[] = [];
   carregando = false;
@@ -33,13 +34,6 @@ export class ProdutoListComponent implements OnInit {
   get totalPaginas(): number {
     return Math.max(1, Math.ceil(this.totalRegistros / this.tamanhoPagina));
   }
-
-  form = this.fb.nonNullable.group({
-    nome: ['', [Validators.required, Validators.minLength(2)]],
-    descricao: [''],
-    quantidade: [0, [Validators.required, Validators.min(0)]],
-    preco: [0, [Validators.required, Validators.min(0)]],
-  });
 
   ngOnInit(): void {
     this.carregar();
@@ -86,26 +80,12 @@ export class ProdutoListComponent implements OnInit {
     }
   }
 
-  adicionar(): void {
-    this.erro = '';
-    this.sucesso = '';
+  criarProduto(): void {
+    this.router.navigate(['/produtos/novo']);
+  }
 
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.produtoService.criar(this.form.getRawValue() as Produto).subscribe({
-      next: () => {
-        this.sucesso = 'Produto cadastrado com sucesso.';
-        this.form.reset({ nome: '', descricao: '', quantidade: 0, preco: 0 });
-        this.pagina = 1;
-        this.carregar();
-      },
-      error: (err) => {
-        this.erro = err.message;
-      },
-    });
+  editar(produto: Produto): void {
+    this.router.navigate(['/produtos', produto.id, 'editar']);
   }
 
   importarCsv(event: Event): void {

@@ -1,39 +1,18 @@
 <section class="card">
-  <h2>Cadastrar produto</h2>
+  <div class="secao-header">
+    <h2>Importar / exportar produtos (CSV)</h2>
+    <button type="button" (click)="criarProduto()">+ Criar produto</button>
+  </div>
+  <p class="hint">
+    Colunas obrigatórias: <code>nome,quantidade</code>. Colunas opcionais:
+    <code>sku,codigo_barras,categoria,fornecedor,unidade_medida,estoque_minimo,preco_custo,preco,ativo,descricao</code>
+    (separador vírgula ou ponto e vírgula).
+  </p>
+  <p class="hint">Categoria e fornecedor são identificados pelo nome; se não existirem, são criados automaticamente.</p>
+  <p class="hint">Se já existir um produto com o mesmo nome, os campos presentes na linha são atualizados (células vazias não sobrescrevem valores já cadastrados); caso contrário, o produto é criado.</p>
 
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
-
-  <form [formGroup]="form" (ngSubmit)="adicionar()" class="form-grid">
-    <div>
-      <label>Nome</label>
-      <input formControlName="nome" name="nome" placeholder="Ex: Parafuso 10mm">
-      <small class="field-error" *ngIf="form.get('nome')?.invalid && form.get('nome')?.touched">
-        Informe pelo menos 2 caracteres.
-      </small>
-    </div>
-    <div>
-      <label>Quantidade inicial</label>
-      <input type="number" min="0" formControlName="quantidade" name="quantidade">
-    </div>
-    <div>
-      <label>Preço (R$)</label>
-      <input type="number" min="0" step="0.01" formControlName="preco" name="preco">
-    </div>
-    <div>
-      <label>Descrição</label>
-      <input formControlName="descricao" name="descricao" placeholder="Opcional">
-    </div>
-    <div>
-      <button type="submit">Adicionar produto</button>
-    </div>
-  </form>
-</section>
-
-<section class="card">
-  <h2>Importar / exportar produtos (CSV)</h2>
-  <p class="hint">Cabeçalho esperado: <code>nome,descricao,quantidade,preco</code> (separador vírgula ou ponto e vírgula).</p>
-  <p class="hint">Se já existir um produto com o mesmo nome, só a quantidade é atualizada; caso contrário, o produto é criado.</p>
 
   <div class="alert alert-error" *ngIf="resultadoImportacao?.erros?.length">
     {{ resultadoImportacao!.erros.length }} linha(s) com erro:
@@ -77,24 +56,31 @@
     <thead>
       <tr>
         <th>Nome</th>
-        <th>Descrição</th>
+        <th>SKU</th>
+        <th>Categoria</th>
         <th>Quantidade</th>
         <th>Preço</th>
+        <th>Status</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let produto of produtos">
         <td>{{ produto.nome }}</td>
-        <td>{{ produto.descricao || '-' }}</td>
-        <td>{{ produto.quantidade }}</td>
+        <td>{{ produto.sku || '-' }}</td>
+        <td>{{ produto.categoria_nome || '-' }}</td>
+        <td [class.estoque-baixo]="produto.quantidade <= produto.estoque_minimo">{{ produto.quantidade }}</td>
         <td>R$ {{ produto.preco }}</td>
         <td>
+          <span class="badge" [class.badge-inativo]="!produto.ativo">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</span>
+        </td>
+        <td>
+          <button class="secondary" (click)="editar(produto)">Editar</button>
           <button class="danger" (click)="pedirRemocao(produto)">Remover</button>
         </td>
       </tr>
       <tr *ngIf="produtos.length === 0">
-        <td colspan="5">Nenhum produto cadastrado ainda.</td>
+        <td colspan="7">Nenhum produto cadastrado ainda.</td>
       </tr>
     </tbody>
   </table>

@@ -1,0 +1,74 @@
+<section class="card">
+  <h2>{{ emEdicao ? 'Editar produto' : 'Criar produto' }}</h2>
+
+  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+  <p *ngIf="carregando">Carregando...</p>
+
+  <form [formGroup]="form" (ngSubmit)="salvar()" class="form-grid" *ngIf="!carregando">
+    <div>
+      <label>Nome</label>
+      <input formControlName="nome" name="nome" placeholder="Ex: Parafuso 10mm">
+      <small class="field-error" *ngIf="form.get('nome')?.invalid && form.get('nome')?.touched">
+        Informe pelo menos 2 caracteres.
+      </small>
+    </div>
+    <div>
+      <label>SKU</label>
+      <input formControlName="sku" name="sku" placeholder="Código interno (opcional)">
+    </div>
+    <div>
+      <label>Código de barras</label>
+      <input formControlName="codigo_barras" name="codigo_barras" placeholder="Opcional">
+    </div>
+    <div>
+      <label>Categoria</label>
+      <select formControlName="categoria" name="categoria">
+        <option [ngValue]="null">Sem categoria</option>
+        <option *ngFor="let categoria of categorias" [ngValue]="categoria.id">{{ categoria.nome }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Fornecedor</label>
+      <select formControlName="fornecedor" name="fornecedor">
+        <option [ngValue]="null">Sem fornecedor</option>
+        <option *ngFor="let fornecedor of fornecedores" [ngValue]="fornecedor.id">{{ fornecedor.nome }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Unidade de medida</label>
+      <select formControlName="unidade_medida" name="unidade_medida">
+        <option *ngFor="let unidade of unidades" [value]="unidade.valor">{{ unidade.rotulo }}</option>
+      </select>
+    </div>
+    <div>
+      <label>Quantidade{{ emEdicao ? '' : ' inicial' }}</label>
+      <input type="number" min="0" formControlName="quantidade" name="quantidade">
+    </div>
+    <div>
+      <label>Estoque mínimo</label>
+      <input type="number" min="0" formControlName="estoque_minimo" name="estoque_minimo">
+    </div>
+    <div>
+      <label>Preço de custo (R$)</label>
+      <input type="number" min="0" step="0.01" formControlName="preco_custo" name="preco_custo">
+    </div>
+    <div>
+      <label>Preço de venda (R$)</label>
+      <input type="number" min="0" step="0.01" formControlName="preco" name="preco">
+    </div>
+    <div>
+      <label>Descrição</label>
+      <input formControlName="descricao" name="descricao" placeholder="Opcional">
+    </div>
+    <div class="campo-checkbox">
+      <label>
+        <input type="checkbox" formControlName="ativo" name="ativo">
+        Produto ativo
+      </label>
+    </div>
+    <div>
+      <button type="submit">{{ emEdicao ? 'Salvar alterações' : 'Adicionar produto' }}</button>
+      <button type="button" class="secondary" (click)="cancelar()">Cancelar</button>
+    </div>
+  </form>
+</section>

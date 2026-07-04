@@ -43,56 +43,6 @@ h2 { margin-top: 0; font-size: 1.05rem; }
   flex-wrap: wrap;
 }
 
-.paginacao-controles {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.75rem;
-}
-
-.itens-por-pagina {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: #4b5563;
-  margin-bottom: 0;
-}
-
-.itens-por-pagina select {
-  width: auto;
-}
-
-.paginacao-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-
-.estoque-baixo {
-  color: #b91c1c;
-  font-weight: 600;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge-inativo {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
 .modal-overlay {
   position: fixed;
   inset: 0;
