@@ -17,6 +17,7 @@ estoque/
 ├── backend/            Django + DRF
 │   ├── estoque_backend/    settings, urls raiz
 │   └── estoque/             app com models, serializers, views, urls, admin
+│       └── nfe.py               parsing puro do XML de NF-e (sem acesso a banco)
 └── frontend/           Angular (standalone components)
     └── src/app/
         ├── models/          interfaces TypeScript (espelham os serializers)
@@ -24,7 +25,7 @@ estoque/
         ├── guards/          authGuard (protege rotas autenticadas)
         ├── interceptors/    injeta o token e trata erros de HTTP
         └── components/      telas (produto, categoria, fornecedor,
-                              movimentação, login)
+                              movimentação, importações, login)
 ```
 
 ## Funcionalidades
@@ -43,11 +44,17 @@ estoque/
   (`/produtos/:id/historico`, acessível pelo botão "Histórico" na lista)
   mostrando os dados do produto e só as movimentações daquele produto
   (`GET /api/movimentacoes/?produto=<id>`).
-- **Importação/exportação em CSV** para Produtos, Categorias e Fornecedores:
-  upsert por nome (atualiza o que já existe, cria o que não existe),
-  células vazias não sobrescrevem valores já cadastrados, e categoria/
-  fornecedor referenciados por nome são criados automaticamente se não
-  existirem.
+- **Importações** (tela própria em `/importacoes`, um item no menu principal):
+  - **CSV** de Produtos, Categorias e Fornecedores: upsert por nome (atualiza
+    o que já existe, cria o que não existe), células vazias não sobrescrevem
+    valores já cadastrados, e categoria/fornecedor referenciados por nome são
+    criados automaticamente se não existirem.
+  - **NF-e (XML)** de compra: dá entrada em estoque casando cada item da nota
+    com um produto existente por SKU (código do fornecedor) ou nome. Itens
+    sem correspondência **não criam produto automaticamente** — ficam
+    pendentes até o produto ser cadastrado manualmente e o mesmo arquivo ser
+    reimportado (reimportar é idempotente: itens já processados não duplicam
+    estoque).
 - **Paginação** nas listagens (a API aceita `?page=` e `?page_size=`).
 
 ### Padrão de telas
@@ -55,7 +62,9 @@ estoque/
 Toda entidade (Produto, Categoria, Fornecedor) segue o mesmo padrão de UI:
 a lista tem um botão **"+ Criar"** no topo e um botão **"Editar"** por linha;
 ambos levam a uma tela de formulário separada (`.../novo` ou `.../:id/editar`),
-que decide entre criar e atualizar conforme a presença do `id` na rota.
+que decide entre criar e atualizar conforme a presença do `id` na rota. As
+listas em si só mostram dados e ações de CRUD — import/export de arquivo
+(CSV/NF-e) fica centralizado na tela **Importações**, não em cada lista.
 
 ## Como rodar
 
@@ -75,6 +84,7 @@ API disponível em `http://localhost:8000/api/` (autenticação por token
 obrigatória, exceto `POST /api/auth/token/`):
 - `GET/POST /api/produtos/`, `GET/PUT/DELETE /api/produtos/{id}/`
 - `POST /api/produtos/importar_csv/`, `GET /api/produtos/exportar_csv/`
+- `POST /api/produtos/importar_nfe/` — dá entrada em estoque a partir do XML de uma NF-e de compra
 - `GET/POST /api/categorias/`, `GET/PUT/DELETE /api/categorias/{id}/`
 - `POST /api/categorias/importar_csv/`, `GET /api/categorias/exportar_csv/`
 - `GET/POST /api/fornecedores/`, `GET/PUT/DELETE /api/fornecedores/{id}/`
@@ -111,7 +121,10 @@ python -m pytest --cov=estoque --cov-report=term-missing   # com cobertura
 Testes em `estoque/tests/`: models (unicidade, defaults, `__str__`), API
 (CRUD, autenticação obrigatória, upsert de CSV, criação automática de
 categoria/fornecedor por nome) e a regra de negócio de estoque insuficiente
-em `Movimentacao`.
+em `Movimentacao`. `test_api_nfe.py` cobre o import de NF-e: matching por
+SKU/nome, reimportação idempotente (mesmo arquivo não duplica estoque),
+item pendente resolvido após cadastro manual + reimportação, quantidade
+fracionária rejeitada, e matching de fornecedor por CNPJ normalizado.
 
 ### Frontend (Jest + TestBed)
 
@@ -124,8 +137,8 @@ npm test
 Testes em arquivos `*.spec.ts` ao lado de cada arquivo testado: services
 (via `HttpClientTestingModule`), guard/interceptors de autenticação e os
 componentes mais representativos (`produto-list`, `produto-form`,
-`produto-historico`, `login`, `movimentacao-form`, incluindo o
-`AsyncValidator` de estoque).
+`produto-historico`, `importacoes`, `login`, `movimentacao-form`,
+incluindo o `AsyncValidator` de estoque).
 
 ### CI
 
@@ -151,10 +164,11 @@ Esse é o objetivo do projeto, então vale destacar os arquivos certos:
 3. **`src/main.ts`** — registra `provideHttpClient()` na aplicação. Sem isso
    o `HttpClient` não pode ser injetado em nenhum service.
 
-4. **Componentes `*-list`** (listagem + import/export CSV) e **`*-form`**
-   (criação/edição) — chamam os services e usam `.subscribe({ next, error })`
-   para tratar sucesso e erro da requisição, atualizando o estado do
-   componente (que a template reflete automaticamente via data binding).
+4. **Componentes `*-list`** (listagem + CRUD) e **`*-form`** (criação/edição)
+   — chamam os services e usam `.subscribe({ next, error })` para tratar
+   sucesso e erro da requisição, atualizando o estado do componente (que a
+   template reflete automaticamente via data binding). O componente
+   **`importacoes`** segue o mesmo padrão para os uploads de CSV/NF-e.
 
 ## Fluxo de uma requisição, ponta a ponta
 
@@ -184,6 +198,11 @@ Exemplo: registrar uma requisição de produto.
   automaticamente (view do backend, dentro de uma transação atômica).
 - CSV de produtos: categoria e fornecedor podem ser referenciados pelo nome;
   se não existirem, são criados automaticamente na importação.
+- Import de NF-e: **não cria produto automaticamente** quando um item não
+  casa com nenhum SKU/nome existente (ao contrário do CSV) — fica pendente
+  até cadastro manual. O rastreamento é por item da nota (não pela nota
+  inteira), então reimportar o mesmo arquivo depois de cadastrar o produto
+  processa só o que faltava, sem duplicar o que já foi aplicado.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
