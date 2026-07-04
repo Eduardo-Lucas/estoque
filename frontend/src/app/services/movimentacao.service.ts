@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Movimentacao } from '../models/movimentacao.model';
 import { environment } from '../../environments/environment';
@@ -17,9 +17,11 @@ interface Paginado<T> {
 export class MovimentacaoService {
   constructor(private http: HttpClient) {}
 
-  // GET /api/movimentacoes/ -> histórico de requisições e devoluções
-  listar(): Observable<Paginado<Movimentacao>> {
-    return this.http.get<Paginado<Movimentacao>>(API_URL);
+  // GET /api/movimentacoes/?produto=<id> -> histórico de requisições e devoluções,
+  // opcionalmente filtrado por um produto específico
+  listar(produtoId?: number): Observable<Paginado<Movimentacao>> {
+    const params = produtoId ? new HttpParams().set('produto', produtoId) : undefined;
+    return this.http.get<Paginado<Movimentacao>>(API_URL, { params });
   }
 
   // POST /api/movimentacoes/ -> registra requisição ou devolução

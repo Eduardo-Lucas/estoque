@@ -87,6 +87,11 @@ describe('ProdutoListComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/produtos', produto.id, 'editar']);
   });
 
+  it('verHistorico navega para /produtos/:id/historico', () => {
+    component.verHistorico(produto);
+    expect(navigate).toHaveBeenCalledWith(['/produtos', produto.id, 'historico']);
+  });
+
   it('proximaPagina avança e recarrega quando não é a última página', () => {
     component.totalRegistros = 30;
     component.tamanhoPagina = 10;

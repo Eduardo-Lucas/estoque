@@ -29,10 +29,18 @@ describe('MovimentacaoService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('lista movimentações', () => {
+  it('lista movimentações sem filtro', () => {
     service.listar().subscribe((resposta) => expect(resposta.results).toEqual([movimentacao]));
     const req = httpMock.expectOne(API_URL);
     expect(req.request.method).toBe('GET');
+    expect(req.request.params.has('produto')).toBe(false);
+    req.flush({ count: 1, next: null, previous: null, results: [movimentacao] });
+  });
+
+  it('lista movimentações filtradas por produto', () => {
+    service.listar(5).subscribe((resposta) => expect(resposta.results).toEqual([movimentacao]));
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.get('produto')).toBe('5');
     req.flush({ count: 1, next: null, previous: null, results: [movimentacao] });
   });
 
