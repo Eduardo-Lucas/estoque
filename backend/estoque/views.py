@@ -211,7 +211,7 @@ def _obter_ou_criar_fornecedor_por_nfe(emitente):
 class ProdutoViewSet(viewsets.ModelViewSet):
     """
     CRUD completo de produtos.
-    GET    /api/produtos/       -> lista
+    GET    /api/produtos/       -> lista (aceita ?nome=, ?categoria=<id>, ?fornecedor=<id> para filtrar)
     POST   /api/produtos/       -> cria
     GET    /api/produtos/{id}/  -> detalhe
     PUT    /api/produtos/{id}/  -> atualiza
@@ -219,6 +219,29 @@ class ProdutoViewSet(viewsets.ModelViewSet):
     """
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
+
+    def get_queryset(self):
+        """
+        Filtros opcionais de busca na listagem:
+        ?nome=<texto>       -> busca parcial, sem diferenciar maiúsculas/minúsculas
+        ?categoria=<id>     -> só produtos dessa categoria
+        ?fornecedor=<id>    -> só produtos desse fornecedor
+        """
+        queryset = super().get_queryset()
+
+        nome = self.request.query_params.get('nome')
+        if nome:
+            queryset = queryset.filter(nome__icontains=nome)
+
+        categoria_id = self.request.query_params.get('categoria')
+        if categoria_id:
+            queryset = queryset.filter(categoria_id=categoria_id)
+
+        fornecedor_id = self.request.query_params.get('fornecedor')
+        if fornecedor_id:
+            queryset = queryset.filter(fornecedor_id=fornecedor_id)
+
+        return queryset
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
     def importar_csv(self, request):

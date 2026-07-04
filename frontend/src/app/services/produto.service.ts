@@ -19,9 +19,23 @@ interface Paginado<T> {
 export class ProdutoService {
   constructor(private http: HttpClient) {}
 
-  // GET /api/produtos/?page=&page_size=  -> lista paginada de produtos
-  listar(pagina: number = 1, tamanhoPagina: number = 10): Observable<Paginado<Produto>> {
-    const params = new HttpParams().set('page', pagina).set('page_size', tamanhoPagina);
+  // GET /api/produtos/?page=&page_size=&nome=&categoria=&fornecedor=  -> lista paginada de produtos,
+  // com filtros de busca opcionais
+  listar(
+    pagina: number = 1,
+    tamanhoPagina: number = 10,
+    filtros?: { nome?: string; categoria?: number | null; fornecedor?: number | null },
+  ): Observable<Paginado<Produto>> {
+    let params = new HttpParams().set('page', pagina).set('page_size', tamanhoPagina);
+    if (filtros?.nome) {
+      params = params.set('nome', filtros.nome);
+    }
+    if (filtros?.categoria) {
+      params = params.set('categoria', filtros.categoria);
+    }
+    if (filtros?.fornecedor) {
+      params = params.set('fornecedor', filtros.fornecedor);
+    }
     return this.http.get<Paginado<Produto>>(API_URL, { params });
   }
 

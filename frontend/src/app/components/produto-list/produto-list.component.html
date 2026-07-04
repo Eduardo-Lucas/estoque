@@ -9,6 +9,24 @@
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
 
+  <div class="filtros-produto">
+    <input
+      type="text"
+      placeholder="Buscar por nome..."
+      [value]="filtroNome"
+      (input)="alterarFiltroNome($event)"
+    >
+    <select [value]="filtroCategoria ?? ''" (change)="alterarFiltroCategoria($event)">
+      <option value="">Todas as categorias</option>
+      <option *ngFor="let categoria of categorias" [value]="categoria.id">{{ categoria.nome }}</option>
+    </select>
+    <select [value]="filtroFornecedor ?? ''" (change)="alterarFiltroFornecedor($event)">
+      <option value="">Todos os fornecedores</option>
+      <option *ngFor="let fornecedor of fornecedores" [value]="fornecedor.id">{{ fornecedor.nome }}</option>
+    </select>
+    <button type="button" class="secondary" *ngIf="temFiltroAtivo" (click)="limparFiltros()">Limpar filtros</button>
+  </div>
+
   <div class="paginacao-controles">
     <label class="itens-por-pagina">
       Itens por página:
@@ -58,7 +76,7 @@
         </td>
       </tr>
       <tr *ngIf="produtos.length === 0">
-        <td colspan="7">Nenhum produto cadastrado ainda.</td>
+        <td colspan="7">{{ temFiltroAtivo ? 'Nenhum produto encontrado para os filtros aplicados.' : 'Nenhum produto cadastrado ainda.' }}</td>
       </tr>
     </tbody>
   </table>

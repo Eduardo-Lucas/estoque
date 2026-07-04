@@ -54,6 +54,24 @@ describe('ProdutoService', () => {
     req.flush({ count: 0, next: null, previous: null, results: [] });
   });
 
+  it('envia os filtros de nome/categoria/fornecedor quando informados', () => {
+    service.listar(1, 10, { nome: 'parafuso', categoria: 2, fornecedor: 3 }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.get('nome')).toBe('parafuso');
+    expect(req.request.params.get('categoria')).toBe('2');
+    expect(req.request.params.get('fornecedor')).toBe('3');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
+  });
+
+  it('não envia parâmetros de filtro quando vazios/nulos', () => {
+    service.listar(1, 10, { nome: '', categoria: null, fornecedor: null }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.has('nome')).toBe(false);
+    expect(req.request.params.has('categoria')).toBe(false);
+    expect(req.request.params.has('fornecedor')).toBe(false);
+    req.flush({ count: 0, next: null, previous: null, results: [] });
+  });
+
   it('cria um produto via POST', () => {
     service.criar(produto).subscribe((resposta) => expect(resposta).toEqual(produto));
     const req = httpMock.expectOne(API_URL);
