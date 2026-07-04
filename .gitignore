@@ -5,8 +5,11 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/**/migrations/*.py
 !backend/**/migrations/__init__.py
+backend/.coverage
+backend/htmlcov/
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
+frontend/out-tsc/

@@ -91,6 +91,36 @@ Acesse `http://localhost:4200` e faça login com o usuário criado via
 > O CORS já está liberado no backend para `localhost:4200` (ver
 > `CORS_ALLOWED_ORIGINS` em `settings.py`).
 
+## Testes
+
+### Backend (pytest-django)
+
+```bash
+cd backend
+source venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest                              # roda a suíte
+python -m pytest --cov=estoque --cov-report=term-missing   # com cobertura
+```
+
+Testes em `estoque/tests/`: models (unicidade, defaults, `__str__`), API
+(CRUD, autenticação obrigatória, upsert de CSV, criação automática de
+categoria/fornecedor por nome) e a regra de negócio de estoque insuficiente
+em `Movimentacao`.
+
+### Frontend (Jest + TestBed)
+
+```bash
+cd frontend
+npm install
+npm test
+```
+
+Testes em arquivos `*.spec.ts` ao lado de cada arquivo testado: services
+(via `HttpClientTestingModule`), guard/interceptors de autenticação e os
+componentes mais representativos (`produto-list`, `produto-form`, `login`,
+`movimentacao-form`, incluindo o `AsyncValidator` de estoque).
+
 ## Onde está o "como o frontend faz requisições"
 
 Esse é o objetivo do projeto, então vale destacar os arquivos certos:
@@ -144,6 +174,5 @@ Exemplo: registrar uma requisição de produto.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
-- Escrever testes (`pytest-django` no backend, `TestBed` no Angular).
-- Configurar CI (GitHub Actions) rodando os testes a cada push/PR.
+- Configurar CI (GitHub Actions) rodando as duas suítes de teste a cada push/PR.
 - Adicionar tela de detalhe/histórico de movimentações por produto.

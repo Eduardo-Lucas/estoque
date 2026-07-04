@@ -95,4 +95,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # o frontend sempre envia JSON (HttpClient); usar o mesmo formato nos testes
+    # evita falsos-negativos causados pela semântica de formulário HTML do DRF
+    # (ex: BooleanField ausente em multipart é interpretado como False).
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
