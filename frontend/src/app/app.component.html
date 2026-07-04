@@ -1,0 +1,13 @@
+<header class="topbar">
+  <h1>{{ titulo }}</h1>
+  <nav *ngIf="autenticado()">
+    <a routerLink="/produtos" routerLinkActive="active">Produtos</a>
+    <a routerLink="/movimentacoes" routerLinkActive="active">Requisição / Devolução</a>
+    <span class="usuario-logado">{{ usuario() }}</span>
+    <button class="secondary" (click)="sair()">Sair</button>
+  </nav>
+</header>
+
+<main class="content">
+  <router-outlet></router-outlet>
+</main>

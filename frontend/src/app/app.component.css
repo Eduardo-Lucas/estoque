@@ -1,0 +1,40 @@
+.topbar {
+  background: #111827;
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.topbar h1 { font-size: 1.15rem; margin: 0; }
+
+.topbar nav a {
+  color: #d1d5db;
+  margin-left: 1.25rem;
+  font-weight: 500;
+  padding-bottom: 4px;
+}
+
+.topbar nav a.active {
+  color: white;
+  border-bottom: 2px solid #2563eb;
+}
+
+.topbar nav button {
+  margin-left: 1.25rem;
+}
+
+.usuario-logado {
+  margin-left: 1.25rem;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.content {
+  max-width: 960px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}

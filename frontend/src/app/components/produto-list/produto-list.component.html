@@ -1,0 +1,118 @@
+<section class="card">
+  <h2>Cadastrar produto</h2>
+
+  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+  <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
+
+  <form [formGroup]="form" (ngSubmit)="adicionar()" class="form-grid">
+    <div>
+      <label>Nome</label>
+      <input formControlName="nome" name="nome" placeholder="Ex: Parafuso 10mm">
+      <small class="field-error" *ngIf="form.get('nome')?.invalid && form.get('nome')?.touched">
+        Informe pelo menos 2 caracteres.
+      </small>
+    </div>
+    <div>
+      <label>Quantidade inicial</label>
+      <input type="number" min="0" formControlName="quantidade" name="quantidade">
+    </div>
+    <div>
+      <label>Preço (R$)</label>
+      <input type="number" min="0" step="0.01" formControlName="preco" name="preco">
+    </div>
+    <div>
+      <label>Descrição</label>
+      <input formControlName="descricao" name="descricao" placeholder="Opcional">
+    </div>
+    <div>
+      <button type="submit">Adicionar produto</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Importar / exportar produtos (CSV)</h2>
+  <p class="hint">Cabeçalho esperado: <code>nome,descricao,quantidade,preco</code> (separador vírgula ou ponto e vírgula).</p>
+  <p class="hint">Se já existir um produto com o mesmo nome, só a quantidade é atualizada; caso contrário, o produto é criado.</p>
+
+  <div class="alert alert-error" *ngIf="resultadoImportacao?.erros?.length">
+    {{ resultadoImportacao!.erros.length }} linha(s) com erro:
+    <ul>
+      <li *ngFor="let linhaComErro of resultadoImportacao!.erros">
+        Linha {{ linhaComErro.linha }}: {{ linhaComErro.mensagem }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="csv-actions">
+    <input
+      type="file"
+      accept=".csv,text/csv"
+      [disabled]="importando"
+      (change)="importarCsv($event)"
+    >
+    <button type="button" class="secondary" [disabled]="exportando" (click)="exportarCsv()">
+      {{ exportando ? 'Baixando...' : 'Baixar CSV' }}
+    </button>
+  </div>
+  <p *ngIf="importando">Importando...</p>
+</section>
+
+<section class="card">
+  <h2>Produtos em estoque</h2>
+
+  <div class="paginacao-controles">
+    <label class="itens-por-pagina">
+      Itens por página:
+      <select [value]="tamanhoPagina" (change)="alterarTamanhoPagina($event)">
+        <option value="10">10</option>
+        <option value="20">20</option>
+      </select>
+    </label>
+  </div>
+
+  <p *ngIf="carregando">Carregando...</p>
+
+  <table *ngIf="!carregando">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Descrição</th>
+        <th>Quantidade</th>
+        <th>Preço</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let produto of produtos">
+        <td>{{ produto.nome }}</td>
+        <td>{{ produto.descricao || '-' }}</td>
+        <td>{{ produto.quantidade }}</td>
+        <td>R$ {{ produto.preco }}</td>
+        <td>
+          <button class="danger" (click)="pedirRemocao(produto)">Remover</button>
+        </td>
+      </tr>
+      <tr *ngIf="produtos.length === 0">
+        <td colspan="5">Nenhum produto cadastrado ainda.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="paginacao-nav" *ngIf="!carregando && totalRegistros > 0">
+    <button type="button" class="secondary" [disabled]="pagina === 1" (click)="paginaAnterior()">« Anterior</button>
+    <span>Página {{ pagina }} de {{ totalPaginas }} ({{ totalRegistros }} produto(s))</span>
+    <button type="button" class="secondary" [disabled]="pagina >= totalPaginas" (click)="proximaPagina()">Próxima »</button>
+  </div>
+</section>
+
+<div class="modal-overlay" *ngIf="produtoParaRemover as produto" (click)="cancelarRemocao()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>Remover produto</h3>
+    <p>Tem certeza que deseja remover <strong>"{{ produto.nome }}"</strong>? Essa ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="secondary" (click)="cancelarRemocao()">Cancelar</button>
+      <button class="danger" (click)="confirmarRemocao()">Remover</button>
+    </div>
+  </div>
+</div>

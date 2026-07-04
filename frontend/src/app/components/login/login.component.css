@@ -1,0 +1,34 @@
+.login-card {
+  max-width: 360px;
+  margin: 3rem auto;
+}
+
+h2 { margin-top: 0; font-size: 1.05rem; }
+
+.senha-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.senha-wrapper input {
+  padding-right: 2.25rem;
+}
+
+.toggle-senha {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #6b7280;
+  padding: 0;
+}
+
+.toggle-senha:hover {
+  background: transparent;
+  color: #1f2933;
+}

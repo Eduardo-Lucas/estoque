@@ -1,0 +1,75 @@
+<section class="card">
+  <h2>Registrar requisição ou devolução</h2>
+
+  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+  <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
+  <div class="alert alert-error" *ngIf="form.hasError('estoqueInsuficiente')">
+    Estoque insuficiente. Disponível: {{ form.getError('estoqueInsuficiente').disponivel }}
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="registrar()" class="form-grid">
+    <div>
+      <label>Produto</label>
+      <select formControlName="produto" name="produto">
+        <option [ngValue]="0" disabled>Selecione...</option>
+        <option *ngFor="let produto of produtos" [ngValue]="produto.id">
+          {{ produto.nome }} (disponível: {{ produto.quantidade }})
+        </option>
+      </select>
+    </div>
+
+    <div>
+      <label>Tipo</label>
+      <select formControlName="tipo" name="tipo">
+        <option value="REQUISICAO">Requisição (retira do estoque)</option>
+        <option value="DEVOLUCAO">Devolução (retorna ao estoque)</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Quantidade</label>
+      <input type="number" min="1" formControlName="quantidade" name="quantidade">
+    </div>
+
+    <div>
+      <label>Observação</label>
+      <input formControlName="observacao" name="observacao" placeholder="Opcional">
+    </div>
+
+    <div>
+      <button type="submit" [disabled]="form.invalid || form.pending">
+        {{ form.pending ? 'Verificando estoque...' : 'Registrar' }}
+      </button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Histórico de movimentações</h2>
+
+  <p *ngIf="carregando">Carregando...</p>
+
+  <table *ngIf="!carregando">
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Solicitante</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let mov of movimentacoes">
+        <td>{{ mov.produto_nome }}</td>
+        <td>{{ mov.tipo === 'REQUISICAO' ? 'Requisição' : 'Devolução' }}</td>
+        <td>{{ mov.quantidade }}</td>
+        <td>{{ mov.solicitante }}</td>
+        <td>{{ mov.data | date:'dd/MM/yyyy HH:mm' }}</td>
+      </tr>
+      <tr *ngIf="movimentacoes.length === 0">
+        <td colspan="5">Nenhuma movimentação registrada ainda.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
