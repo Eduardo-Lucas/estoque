@@ -39,6 +39,10 @@ estoque/
 - **Requisição / Devolução de estoque**: registra movimentações e ajusta a
   quantidade do produto automaticamente, dentro de uma transação atômica.
   Bloqueia requisições que excedam o estoque disponível.
+- **Histórico de movimentações por produto**: tela de detalhe
+  (`/produtos/:id/historico`, acessível pelo botão "Histórico" na lista)
+  mostrando os dados do produto e só as movimentações daquele produto
+  (`GET /api/movimentacoes/?produto=<id>`).
 - **Importação/exportação em CSV** para Produtos, Categorias e Fornecedores:
   upsert por nome (atualiza o que já existe, cria o que não existe),
   células vazias não sobrescrevem valores já cadastrados, e categoria/
@@ -75,7 +79,7 @@ obrigatória, exceto `POST /api/auth/token/`):
 - `POST /api/categorias/importar_csv/`, `GET /api/categorias/exportar_csv/`
 - `GET/POST /api/fornecedores/`, `GET/PUT/DELETE /api/fornecedores/{id}/`
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
-- `GET/POST /api/movimentacoes/`
+- `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto
 - `POST /api/auth/token/` — login, retorna o token do usuário
 
 ### Frontend
@@ -119,8 +123,9 @@ npm test
 
 Testes em arquivos `*.spec.ts` ao lado de cada arquivo testado: services
 (via `HttpClientTestingModule`), guard/interceptors de autenticação e os
-componentes mais representativos (`produto-list`, `produto-form`, `login`,
-`movimentacao-form`, incluindo o `AsyncValidator` de estoque).
+componentes mais representativos (`produto-list`, `produto-form`,
+`produto-historico`, `login`, `movimentacao-form`, incluindo o
+`AsyncValidator` de estoque).
 
 ### CI
 
@@ -182,4 +187,4 @@ Exemplo: registrar uma requisição de produto.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
-- Adicionar tela de detalhe/histórico de movimentações por produto.
+- Adicionar filtros de busca (nome, categoria, fornecedor) na listagem de produtos.
