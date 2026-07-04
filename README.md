@@ -56,6 +56,10 @@ estoque/
     reimportado (reimportar é idempotente: itens já processados não duplicam
     estoque).
 - **Paginação** nas listagens (a API aceita `?page=` e `?page_size=`).
+- **Filtros de busca na listagem de produtos**: por nome (busca parcial,
+  sem diferenciar maiúsculas/minúsculas, com debounce de 300ms no campo de
+  texto) e por categoria/fornecedor (selects), combináveis entre si
+  (`GET /api/produtos/?nome=&categoria=<id>&fornecedor=<id>`).
 
 ### Padrão de telas
 
@@ -83,6 +87,7 @@ python manage.py runserver
 API disponível em `http://localhost:8000/api/` (autenticação por token
 obrigatória, exceto `POST /api/auth/token/`):
 - `GET/POST /api/produtos/`, `GET/PUT/DELETE /api/produtos/{id}/`
+  (`GET` aceita `?nome=`, `?categoria=<id>`, `?fornecedor=<id>` para filtrar)
 - `POST /api/produtos/importar_csv/`, `GET /api/produtos/exportar_csv/`
 - `POST /api/produtos/importar_nfe/` — dá entrada em estoque a partir do XML de uma NF-e de compra
 - `GET/POST /api/categorias/`, `GET/PUT/DELETE /api/categorias/{id}/`
@@ -120,10 +125,11 @@ python -m pytest --cov=estoque --cov-report=term-missing   # com cobertura
 
 Testes em `estoque/tests/`: models (unicidade, defaults, `__str__`), API
 (CRUD, autenticação obrigatória, upsert de CSV, criação automática de
-categoria/fornecedor por nome) e a regra de negócio de estoque insuficiente
-em `Movimentacao`. `test_api_nfe.py` cobre o import de NF-e: matching por
-SKU/nome, reimportação idempotente (mesmo arquivo não duplica estoque),
-item pendente resolvido após cadastro manual + reimportação, quantidade
+categoria/fornecedor por nome, filtros de busca por nome/categoria/
+fornecedor) e a regra de negócio de estoque insuficiente em `Movimentacao`.
+`test_api_nfe.py` cobre o import de NF-e: matching por SKU/nome,
+reimportação idempotente (mesmo arquivo não duplica estoque), item
+pendente resolvido após cadastro manual + reimportação, quantidade
 fracionária rejeitada, e matching de fornecedor por CNPJ normalizado.
 
 ### Frontend (Jest + TestBed)
@@ -206,4 +212,4 @@ Exemplo: registrar uma requisição de produto.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
-- Adicionar filtros de busca (nome, categoria, fornecedor) na listagem de produtos.
+- Persistir os filtros de produtos na URL (query params), pra permitir compartilhar/recarregar a busca.

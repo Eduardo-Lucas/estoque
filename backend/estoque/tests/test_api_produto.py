@@ -58,6 +58,53 @@ class TestProdutoApiCrud:
         assert set(resposta.data.keys()) == {'count', 'next', 'previous', 'results'}
 
 
+class TestProdutoApiFiltros:
+    def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, produto):
+        Produto.objects.create(nome='Martelo de Borracha', quantidade=1)
+
+        resposta = api_client.get(reverse('produto-list'), {'nome': 'parafuso'})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == produto.nome
+
+    def test_filtro_por_nome_sem_correspondencia_retorna_vazio(self, api_client, produto):
+        resposta = api_client.get(reverse('produto-list'), {'nome': 'inexistente'})
+        assert resposta.data['count'] == 0
+
+    def test_filtro_por_categoria(self, api_client, produto, categoria):
+        outra_categoria = Categoria.objects.create(nome='Elétrica')
+        Produto.objects.create(nome='Fita isolante', categoria=outra_categoria, quantidade=1)
+
+        resposta = api_client.get(reverse('produto-list'), {'categoria': categoria.id})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == produto.nome
+
+    def test_filtro_por_fornecedor(self, api_client, produto, fornecedor):
+        outro_fornecedor = Fornecedor.objects.create(nome='Distribuidora XYZ')
+        Produto.objects.create(nome='Cabo de aço', fornecedor=outro_fornecedor, quantidade=1)
+
+        resposta = api_client.get(reverse('produto-list'), {'fornecedor': fornecedor.id})
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == produto.nome
+
+    def test_filtros_combinados(self, api_client, produto, categoria, fornecedor):
+        Produto.objects.create(nome='Parafuso 20mm', categoria=categoria, quantidade=1)
+
+        resposta = api_client.get(
+            reverse('produto-list'), {'nome': 'parafuso', 'categoria': categoria.id, 'fornecedor': fornecedor.id},
+        )
+
+        assert resposta.data['count'] == 1
+        assert resposta.data['results'][0]['nome'] == produto.nome
+
+    def test_sem_filtro_retorna_todos(self, api_client, produto):
+        Produto.objects.create(nome='Martelo de Borracha', quantidade=1)
+        resposta = api_client.get(reverse('produto-list'))
+        assert resposta.data['count'] == 2
+
+
 class TestProdutoImportarCsv:
     def test_criacao_com_campos_opcionais_e_fk_por_nome(self, api_client):
         conteudo = (

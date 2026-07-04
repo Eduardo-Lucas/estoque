@@ -1,8 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Produto } from '../../models/produto.model';
+import { Categoria } from '../../models/categoria.model';
+import { Fornecedor } from '../../models/fornecedor.model';
 import { ProdutoService } from '../../services/produto.service';
+import { CategoriaService } from '../../services/categoria.service';
+import { FornecedorService } from '../../services/fornecedor.service';
 
 @Component({
   selector: 'app-produto-list',
@@ -11,11 +15,15 @@ import { ProdutoService } from '../../services/produto.service';
   templateUrl: './produto-list.component.html',
   styleUrl: './produto-list.component.css',
 })
-export class ProdutoListComponent implements OnInit {
+export class ProdutoListComponent implements OnInit, OnDestroy {
   private produtoService = inject(ProdutoService);
+  private categoriaService = inject(CategoriaService);
+  private fornecedorService = inject(FornecedorService);
   private router = inject(Router);
 
   produtos: Produto[] = [];
+  categorias: Categoria[] = [];
+  fornecedores: Fornecedor[] = [];
   carregando = false;
   erro = '';
   sucesso = '';
@@ -26,17 +34,36 @@ export class ProdutoListComponent implements OnInit {
   tamanhoPagina = 10;
   totalRegistros = 0;
 
+  filtroNome = '';
+  filtroCategoria: number | null = null;
+  filtroFornecedor: number | null = null;
+  private debounceFiltroNome?: ReturnType<typeof setTimeout>;
+
   get totalPaginas(): number {
     return Math.max(1, Math.ceil(this.totalRegistros / this.tamanhoPagina));
   }
 
+  get temFiltroAtivo(): boolean {
+    return !!this.filtroNome || this.filtroCategoria !== null || this.filtroFornecedor !== null;
+  }
+
   ngOnInit(): void {
     this.carregar();
+    this.carregarCategorias();
+    this.carregarFornecedores();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.debounceFiltroNome);
   }
 
   carregar(): void {
     this.carregando = true;
-    this.produtoService.listar(this.pagina, this.tamanhoPagina).subscribe({
+    this.produtoService.listar(this.pagina, this.tamanhoPagina, {
+      nome: this.filtroNome,
+      categoria: this.filtroCategoria,
+      fornecedor: this.filtroFornecedor,
+    }).subscribe({
       next: (resposta) => {
         this.produtos = resposta.results;
         this.totalRegistros = resposta.count;
@@ -53,6 +80,49 @@ export class ProdutoListComponent implements OnInit {
         this.carregando = false;
       },
     });
+  }
+
+  carregarCategorias(): void {
+    this.categoriaService.listar().subscribe({
+      next: (resposta) => (this.categorias = resposta.results),
+    });
+  }
+
+  carregarFornecedores(): void {
+    this.fornecedorService.listar().subscribe({
+      next: (resposta) => (this.fornecedores = resposta.results),
+    });
+  }
+
+  alterarFiltroNome(event: Event): void {
+    this.filtroNome = (event.target as HTMLInputElement).value;
+    clearTimeout(this.debounceFiltroNome);
+    this.debounceFiltroNome = setTimeout(() => {
+      this.pagina = 1;
+      this.carregar();
+    }, 300);
+  }
+
+  alterarFiltroCategoria(event: Event): void {
+    const valor = (event.target as HTMLSelectElement).value;
+    this.filtroCategoria = valor ? Number(valor) : null;
+    this.pagina = 1;
+    this.carregar();
+  }
+
+  alterarFiltroFornecedor(event: Event): void {
+    const valor = (event.target as HTMLSelectElement).value;
+    this.filtroFornecedor = valor ? Number(valor) : null;
+    this.pagina = 1;
+    this.carregar();
+  }
+
+  limparFiltros(): void {
+    this.filtroNome = '';
+    this.filtroCategoria = null;
+    this.filtroFornecedor = null;
+    this.pagina = 1;
+    this.carregar();
   }
 
   alterarTamanhoPagina(event: Event): void {
