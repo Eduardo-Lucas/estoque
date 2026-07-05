@@ -14,14 +14,3 @@ h2 { margin-top: 0; font-size: 1.05rem; }
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
-
-.campo-checkbox label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 400;
-}
-
-.campo-checkbox input {
-  width: auto;
-}

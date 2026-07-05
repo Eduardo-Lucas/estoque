@@ -5,4 +5,5 @@ export interface Fornecedor {
   telefone?: string;
   email?: string;
   endereco?: string;
+  ativo?: boolean;
 }

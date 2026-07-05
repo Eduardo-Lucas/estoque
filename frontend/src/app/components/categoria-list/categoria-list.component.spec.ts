@@ -8,7 +8,7 @@ import { Categoria } from '../../models/categoria.model';
 describe('CategoriaListComponent', () => {
   let fixture: ComponentFixture<CategoriaListComponent>;
   let component: CategoriaListComponent;
-  let categoriaService: { listar: jest.Mock; remover: jest.Mock };
+  let categoriaService: { listar: jest.Mock; inativar: jest.Mock };
   let navigate: jest.SpyInstance;
 
   const categoria: Categoria = { id: 1, nome: 'Ferragens', descricao: 'Parafusos e afins' };
@@ -20,7 +20,7 @@ describe('CategoriaListComponent', () => {
   beforeEach(async () => {
     categoriaService = {
       listar: jest.fn().mockReturnValue(of(respostaPaginada([categoria]))),
-      remover: jest.fn().mockReturnValue(of(undefined)),
+      inativar: jest.fn().mockReturnValue(of(undefined)),
     };
 
     await TestBed.configureTestingModule({
@@ -101,30 +101,30 @@ describe('CategoriaListComponent', () => {
     });
   });
 
-  describe('remoção', () => {
-    it('pedirRemocao guarda a categoria e cancelarRemocao limpa', () => {
-      component.pedirRemocao(categoria);
-      expect(component.categoriaParaRemover).toEqual(categoria);
-      component.cancelarRemocao();
-      expect(component.categoriaParaRemover).toBeNull();
+  describe('inativação', () => {
+    it('pedirInativacao guarda a categoria e cancelarInativacao limpa', () => {
+      component.pedirInativacao(categoria);
+      expect(component.categoriaParaInativar).toEqual(categoria);
+      component.cancelarInativacao();
+      expect(component.categoriaParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao remove a categoria e recarrega a lista', () => {
-      component.pedirRemocao(categoria);
-      component.confirmarRemocao();
+    it('confirmarInativacao inativa a categoria e recarrega a lista', () => {
+      component.pedirInativacao(categoria);
+      component.confirmarInativacao();
 
-      expect(categoriaService.remover).toHaveBeenCalledWith(categoria.id);
-      expect(component.sucesso).toBe('Categoria removida com sucesso.');
-      expect(component.categoriaParaRemover).toBeNull();
+      expect(categoriaService.inativar).toHaveBeenCalledWith(categoria.id);
+      expect(component.sucesso).toBe('Categoria inativada com sucesso.');
+      expect(component.categoriaParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao trata erro do backend', () => {
-      categoriaService.remover.mockReturnValue(throwError(() => new Error('falha ao remover')));
-      component.pedirRemocao(categoria);
-      component.confirmarRemocao();
+    it('confirmarInativacao trata erro do backend', () => {
+      categoriaService.inativar.mockReturnValue(throwError(() => new Error('falha ao inativar')));
+      component.pedirInativacao(categoria);
+      component.confirmarInativacao();
 
-      expect(component.erro).toBe('falha ao remover');
-      expect(component.categoriaParaRemover).toBeNull();
+      expect(component.erro).toBe('falha ao inativar');
+      expect(component.categoriaParaInativar).toBeNull();
     });
   });
 });

@@ -32,10 +32,12 @@ class TestCategoriaApi:
         categoria.refresh_from_db()
         assert categoria.descricao == 'Nova descrição'
 
-    def test_remover_categoria(self, api_client, categoria):
+    def test_remover_categoria_inativa_em_vez_de_excluir(self, api_client, categoria):
         resposta = api_client.delete(reverse('categoria-detail', args=[categoria.id]))
         assert resposta.status_code == status.HTTP_204_NO_CONTENT
-        assert not Categoria.objects.filter(id=categoria.id).exists()
+        categoria.refresh_from_db()
+        assert Categoria.objects.filter(id=categoria.id).exists()
+        assert categoria.ativo is False
 
     def test_importar_csv_cria_e_atualiza(self, api_client):
         conteudo = (
@@ -104,10 +106,12 @@ class TestFornecedorApi:
         resposta = api_client.post(reverse('fornecedor-list'), {'nome': fornecedor.nome})
         assert resposta.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_remover_fornecedor(self, api_client, fornecedor):
+    def test_remover_fornecedor_inativa_em_vez_de_excluir(self, api_client, fornecedor):
         resposta = api_client.delete(reverse('fornecedor-detail', args=[fornecedor.id]))
         assert resposta.status_code == status.HTTP_204_NO_CONTENT
-        assert not Fornecedor.objects.filter(id=fornecedor.id).exists()
+        fornecedor.refresh_from_db()
+        assert Fornecedor.objects.filter(id=fornecedor.id).exists()
+        assert fornecedor.ativo is False
 
     def test_importar_csv_cria_e_atualiza(self, api_client):
         conteudo = b'nome,cnpj,telefone,email,endereco\nDistribuidora ABC,12.345.678/0001-99,1140028922,contato@abc.com,Rua A\n'

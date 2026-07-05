@@ -35,7 +35,8 @@ export class FornecedorService {
     return this.http.put<Fornecedor>(`${API_URL}${id}/`, fornecedor);
   }
 
-  remover(id: number): Observable<void> {
+  // DELETE /api/fornecedores/{id}/  -> inativa o fornecedor (define ativo=false; não remove o registro)
+  inativar(id: number): Observable<void> {
     return this.http.delete<void>(`${API_URL}${id}/`);
   }
 

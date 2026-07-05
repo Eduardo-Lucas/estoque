@@ -47,10 +47,12 @@ class TestProdutoApiCrud:
         produto.refresh_from_db()
         assert str(produto.preco) == '3.00'
 
-    def test_remover_produto(self, api_client, produto):
+    def test_remover_produto_inativa_em_vez_de_excluir(self, api_client, produto):
         resposta = api_client.delete(reverse('produto-detail', args=[produto.id]))
         assert resposta.status_code == status.HTTP_204_NO_CONTENT
-        assert not Produto.objects.filter(id=produto.id).exists()
+        produto.refresh_from_db()
+        assert Produto.objects.filter(id=produto.id).exists()
+        assert produto.ativo is False
 
     def test_listagem_e_paginada(self, api_client, produto):
         resposta = api_client.get(reverse('produto-list'))

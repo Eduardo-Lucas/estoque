@@ -5,13 +5,13 @@ from .models import Produto, Categoria, Fornecedor, Movimentacao
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
-        fields = ['id', 'nome', 'descricao']
+        fields = ['id', 'nome', 'descricao', 'ativo']
 
 
 class FornecedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fornecedor
-        fields = ['id', 'nome', 'cnpj', 'telefone', 'email', 'endereco']
+        fields = ['id', 'nome', 'cnpj', 'telefone', 'email', 'endereco', 'ativo']
 
 
 class ProdutoSerializer(serializers.ModelSerializer):

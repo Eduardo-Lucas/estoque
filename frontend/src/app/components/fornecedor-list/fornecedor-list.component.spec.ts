@@ -8,7 +8,7 @@ import { Fornecedor } from '../../models/fornecedor.model';
 describe('FornecedorListComponent', () => {
   let fixture: ComponentFixture<FornecedorListComponent>;
   let component: FornecedorListComponent;
-  let fornecedorService: { listar: jest.Mock; remover: jest.Mock };
+  let fornecedorService: { listar: jest.Mock; inativar: jest.Mock };
   let navigate: jest.SpyInstance;
 
   const fornecedor: Fornecedor = { id: 1, nome: 'Distribuidora ABC', email: 'contato@abc.com' };
@@ -20,7 +20,7 @@ describe('FornecedorListComponent', () => {
   beforeEach(async () => {
     fornecedorService = {
       listar: jest.fn().mockReturnValue(of(respostaPaginada([fornecedor]))),
-      remover: jest.fn().mockReturnValue(of(undefined)),
+      inativar: jest.fn().mockReturnValue(of(undefined)),
     };
 
     await TestBed.configureTestingModule({
@@ -101,30 +101,30 @@ describe('FornecedorListComponent', () => {
     });
   });
 
-  describe('remoção', () => {
-    it('pedirRemocao guarda o fornecedor e cancelarRemocao limpa', () => {
-      component.pedirRemocao(fornecedor);
-      expect(component.fornecedorParaRemover).toEqual(fornecedor);
-      component.cancelarRemocao();
-      expect(component.fornecedorParaRemover).toBeNull();
+  describe('inativação', () => {
+    it('pedirInativacao guarda o fornecedor e cancelarInativacao limpa', () => {
+      component.pedirInativacao(fornecedor);
+      expect(component.fornecedorParaInativar).toEqual(fornecedor);
+      component.cancelarInativacao();
+      expect(component.fornecedorParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao remove o fornecedor e recarrega a lista', () => {
-      component.pedirRemocao(fornecedor);
-      component.confirmarRemocao();
+    it('confirmarInativacao inativa o fornecedor e recarrega a lista', () => {
+      component.pedirInativacao(fornecedor);
+      component.confirmarInativacao();
 
-      expect(fornecedorService.remover).toHaveBeenCalledWith(fornecedor.id);
-      expect(component.sucesso).toBe('Fornecedor removido com sucesso.');
-      expect(component.fornecedorParaRemover).toBeNull();
+      expect(fornecedorService.inativar).toHaveBeenCalledWith(fornecedor.id);
+      expect(component.sucesso).toBe('Fornecedor inativado com sucesso.');
+      expect(component.fornecedorParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao trata erro do backend', () => {
-      fornecedorService.remover.mockReturnValue(throwError(() => new Error('falha ao remover')));
-      component.pedirRemocao(fornecedor);
-      component.confirmarRemocao();
+    it('confirmarInativacao trata erro do backend', () => {
+      fornecedorService.inativar.mockReturnValue(throwError(() => new Error('falha ao inativar')));
+      component.pedirInativacao(fornecedor);
+      component.confirmarInativacao();
 
-      expect(component.erro).toBe('falha ao remover');
-      expect(component.fornecedorParaRemover).toBeNull();
+      expect(component.erro).toBe('falha ao inativar');
+      expect(component.fornecedorParaInativar).toBeNull();
     });
   });
 });

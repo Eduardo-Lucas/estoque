@@ -31,6 +31,12 @@
       <label>Endereço</label>
       <input formControlName="endereco" name="endereco" placeholder="Opcional">
     </div>
+    <div class="campo-checkbox">
+      <label>
+        <input type="checkbox" formControlName="ativo" name="ativo">
+        Fornecedor ativo
+      </label>
+    </div>
     <div>
       <button type="submit">{{ emEdicao ? 'Salvar alterações' : 'Adicionar fornecedor' }}</button>
       <button type="button" class="secondary" (click)="cancelar()">Cancelar</button>
