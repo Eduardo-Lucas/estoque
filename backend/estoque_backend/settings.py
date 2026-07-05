@@ -22,9 +22,12 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
 
-    # App local
+    # Apps locais
+    'contas',
     'estoque',
 ]
+
+AUTH_USER_MODEL = 'contas.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -22,7 +22,7 @@ def test_login_retorna_token(usuario):
     client = APIClient()
     resposta = client.post(
         reverse('api_token_auth'),
-        {'username': 'eduardo', 'password': 'senha-forte-123'},
+        {'email': 'eduardo@example.com', 'password': 'senha-forte-123'},
     )
     assert resposta.status_code == status.HTTP_200_OK
     assert 'token' in resposta.data
@@ -32,6 +32,16 @@ def test_login_com_senha_errada_falha(usuario):
     client = APIClient()
     resposta = client.post(
         reverse('api_token_auth'),
-        {'username': 'eduardo', 'password': 'senha-errada'},
+        {'email': 'eduardo@example.com', 'password': 'senha-errada'},
+    )
+    assert resposta.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_login_com_username_em_vez_de_email_falha(usuario):
+    """O contrato mudou: o campo agora é `email`, não `username`."""
+    client = APIClient()
+    resposta = client.post(
+        reverse('api_token_auth'),
+        {'username': 'eduardo@example.com', 'password': 'senha-forte-123'},
     )
     assert resposta.status_code == status.HTTP_400_BAD_REQUEST

@@ -6,39 +6,39 @@ import { environment } from '../../environments/environment';
 
 const API_URL = `${environment.apiUrl}/auth/token/`;
 const STORAGE_KEY = 'estoque_auth_token';
-const USERNAME_STORAGE_KEY = 'estoque_auth_username';
+const EMAIL_STORAGE_KEY = 'estoque_auth_email';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly tokenSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY));
-  private readonly usernameSignal = signal<string | null>(localStorage.getItem(USERNAME_STORAGE_KEY));
+  private readonly emailSignal = signal<string | null>(localStorage.getItem(EMAIL_STORAGE_KEY));
 
   readonly autenticado = computed(() => !!this.tokenSignal());
-  readonly usuario = computed(() => this.usernameSignal());
+  readonly usuario = computed(() => this.emailSignal());
 
   constructor(private http: HttpClient) {}
 
   login(credenciais: Credenciais): Observable<TokenResponse> {
     return this.http
       .post<TokenResponse>(API_URL, credenciais)
-      .pipe(tap((resposta) => this.armazenarSessao(resposta.token, credenciais.username)));
+      .pipe(tap((resposta) => this.armazenarSessao(resposta.token, credenciais.email)));
   }
 
   logout(): void {
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(USERNAME_STORAGE_KEY);
+    localStorage.removeItem(EMAIL_STORAGE_KEY);
     this.tokenSignal.set(null);
-    this.usernameSignal.set(null);
+    this.emailSignal.set(null);
   }
 
   getToken(): string | null {
     return this.tokenSignal();
   }
 
-  private armazenarSessao(token: string, username: string): void {
+  private armazenarSessao(token: string, email: string): void {
     localStorage.setItem(STORAGE_KEY, token);
-    localStorage.setItem(USERNAME_STORAGE_KEY, username);
+    localStorage.setItem(EMAIL_STORAGE_KEY, email);
     this.tokenSignal.set(token);
-    this.usernameSignal.set(username);
+    this.emailSignal.set(email);
   }
 }
