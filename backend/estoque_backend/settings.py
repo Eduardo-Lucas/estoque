@@ -120,16 +120,23 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-def _com_https(valor: str) -> str:
-    """O render.yaml injeta FRONTEND_URL/CORS_ALLOWED_ORIGINS via `fromService`,
-    que devolve só o host (sem esquema) — completa com https:// nesse caso."""
-    return valor if valor.startswith('http') else f'https://{valor}'
+def _url_publica_render(valor: str) -> str:
+    """O render.yaml injeta FRONTEND_URL/CORS_ALLOWED_ORIGINS via `fromService`
+    (property: host), que devolve o hostname da rede *privada* do Render (ex:
+    'estoque-frontend-hp5y', sem esquema nem `.onrender.com`) — essa propriedade
+    foi pensada pra comunicação interna entre serviços, não pra uso público no
+    navegador. Completa esquema e domínio quando estiverem faltando."""
+    if valor.startswith('http'):
+        return valor
+    if '.' not in valor:
+        valor = f'{valor}.onrender.com'
+    return f'https://{valor}'
 
 
 # CORS: em dev, libera o Angular local; em produção, a env var vem do
 # render.yaml apontando pro host do Static Site do frontend.
 _cors_env = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200')
-CORS_ALLOWED_ORIGINS = [_com_https(origem.strip()) for origem in _cors_env.split(',') if origem.strip()]
+CORS_ALLOWED_ORIGINS = [_url_publica_render(origem.strip()) for origem in _cors_env.split(',') if origem.strip()]
 
 # E-mail de confirmação de cadastro: em dev (e por padrão em produção, já que
 # é tudo camada gratuita) cai no console — em produção isso vai pro log do
@@ -138,7 +145,7 @@ EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.conso
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@estoque.local')
 
 # Base da URL do frontend, usada para montar o link de confirmação de e-mail.
-FRONTEND_URL = _com_https(os.environ.get('FRONTEND_URL', 'http://localhost:4200'))
+FRONTEND_URL = _url_publica_render(os.environ.get('FRONTEND_URL', 'http://localhost:4200'))
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'estoque.pagination.PaginacaoPadrao',
