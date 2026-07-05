@@ -48,6 +48,18 @@
 <section class="card">
   <h2>Histórico de movimentações</h2>
 
+  <div class="filtros-produto">
+    <label>
+      De:
+      <input type="date" [value]="filtroDataInicio" (change)="alterarFiltroDataInicio($event)">
+    </label>
+    <label>
+      Até:
+      <input type="date" [value]="filtroDataFim" (change)="alterarFiltroDataFim($event)">
+    </label>
+    <button type="button" class="secondary" *ngIf="temFiltroPeriodo" (click)="limparFiltroPeriodo()">Limpar filtro</button>
+  </div>
+
   <p *ngIf="carregandoMovimentacoes">Carregando...</p>
 
   <table *ngIf="!carregandoMovimentacoes">
@@ -69,7 +81,7 @@
         <td>{{ mov.data | date:'dd/MM/yyyy HH:mm' }}</td>
       </tr>
       <tr *ngIf="movimentacoes.length === 0">
-        <td colspan="5">Nenhuma movimentação registrada para este produto ainda.</td>
+        <td colspan="5">{{ temFiltroPeriodo ? 'Nenhuma movimentação encontrada para o período selecionado.' : 'Nenhuma movimentação registrada para este produto ainda.' }}</td>
       </tr>
     </tbody>
   </table>

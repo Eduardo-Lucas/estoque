@@ -38,10 +38,27 @@ describe('MovimentacaoService', () => {
   });
 
   it('lista movimentações filtradas por produto', () => {
-    service.listar(5).subscribe((resposta) => expect(resposta.results).toEqual([movimentacao]));
+    service.listar({ produtoId: 5 }).subscribe((resposta) => expect(resposta.results).toEqual([movimentacao]));
     const req = httpMock.expectOne((r) => r.url === API_URL);
     expect(req.request.params.get('produto')).toBe('5');
     req.flush({ count: 1, next: null, previous: null, results: [movimentacao] });
+  });
+
+  it('lista movimentações filtradas por período', () => {
+    service.listar({ produtoId: 5, dataInicio: '2026-07-01', dataFim: '2026-07-31' }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.get('produto')).toBe('5');
+    expect(req.request.params.get('data_inicio')).toBe('2026-07-01');
+    expect(req.request.params.get('data_fim')).toBe('2026-07-31');
+    req.flush({ count: 0, next: null, previous: null, results: [] });
+  });
+
+  it('não envia parâmetros de período quando vazios', () => {
+    service.listar({ produtoId: 5 }).subscribe();
+    const req = httpMock.expectOne((r) => r.url === API_URL);
+    expect(req.request.params.has('data_inicio')).toBe(false);
+    expect(req.request.params.has('data_fim')).toBe(false);
+    req.flush({ count: 0, next: null, previous: null, results: [] });
   });
 
   it('registra uma movimentação via POST', () => {

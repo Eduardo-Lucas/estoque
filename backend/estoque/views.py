@@ -4,6 +4,7 @@ import re
 from decimal import Decimal
 
 from django.http import HttpResponse
+from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -542,11 +543,24 @@ class MovimentacaoViewSet(viewsets.ModelViewSet):
     serializer_class = MovimentacaoSerializer
 
     def get_queryset(self):
-        """GET /api/movimentacoes/?produto=<id> -> histórico de um produto específico"""
+        """
+        GET /api/movimentacoes/?produto=<id> -> histórico de um produto específico
+        ?data_inicio=AAAA-MM-DD e/ou ?data_fim=AAAA-MM-DD -> restringe ao período
+        (datas inválidas são ignoradas, sem quebrar a listagem)
+        """
         queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
         produto_id = self.request.query_params.get('produto')
         if produto_id:
             queryset = queryset.filter(produto_id=produto_id)
+
+        data_inicio = parse_date(self.request.query_params.get('data_inicio') or '')
+        if data_inicio:
+            queryset = queryset.filter(data__date__gte=data_inicio)
+
+        data_fim = parse_date(self.request.query_params.get('data_fim') or '')
+        if data_fim:
+            queryset = queryset.filter(data__date__lte=data_fim)
+
         return queryset
 
     def create(self, request, *args, **kwargs):

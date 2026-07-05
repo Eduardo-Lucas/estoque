@@ -73,7 +73,9 @@ estoque/
 - **Histórico de movimentações por produto**: tela de detalhe
   (`/produtos/:id/historico`, acessível pelo botão "Histórico" na lista)
   mostrando os dados do produto (incluindo saldo atual) e só as
-  movimentações daquele produto (`GET /api/movimentacoes/?produto=<id>`).
+  movimentações daquele produto (`GET /api/movimentacoes/?produto=<id>`),
+  com filtro opcional por período (`&data_inicio=AAAA-MM-DD&data_fim=AAAA-MM-DD`
+  — datas inválidas são ignoradas em vez de quebrar a listagem).
 - **Importações** (tela própria em `/importacoes`, um item no menu principal):
   - **CSV** de Produtos, Categorias e Fornecedores: upsert por nome (atualiza
     o que já existe, cria o que não existe), células vazias não sobrescrevem
@@ -137,7 +139,8 @@ obrigatória, exceto `POST /api/auth/token/`):
 - `GET/POST /api/fornecedores/`, `GET/PUT/DELETE /api/fornecedores/{id}/`
   (`GET` aceita `?nome=` para filtrar; `DELETE` inativa em vez de remover)
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
-- `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto
+- `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto,
+  `?data_inicio=AAAA-MM-DD` e/ou `?data_fim=AAAA-MM-DD` restringem por período
 - `POST /api/auth/token/` — login por e-mail (`{"email": ..., "password": ...}`), retorna o token do usuário
 
 ### Frontend

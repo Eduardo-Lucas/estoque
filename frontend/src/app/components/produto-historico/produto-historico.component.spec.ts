@@ -68,7 +68,7 @@ describe('ProdutoHistoricoComponent', () => {
   });
 
   it('carrega o histórico de movimentações filtrado pelo produto', () => {
-    expect(movimentacaoService.listar).toHaveBeenCalledWith(3);
+    expect(movimentacaoService.listar).toHaveBeenCalledWith({ produtoId: 3, dataInicio: undefined, dataFim: undefined });
     expect(component.movimentacoes).toEqual([movimentacao]);
     expect(component.carregandoMovimentacoes).toBe(false);
   });
@@ -90,5 +90,54 @@ describe('ProdutoHistoricoComponent', () => {
   it('voltar navega para /produtos', () => {
     component.voltar();
     expect(navigate).toHaveBeenCalledWith(['/produtos']);
+  });
+
+  describe('filtro por período', () => {
+    function eventoDeValor(valor: string): Event {
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.value = valor;
+      return { target: input } as unknown as Event;
+    }
+
+    it('temFiltroPeriodo é falso sem nenhum filtro aplicado', () => {
+      expect(component.temFiltroPeriodo).toBe(false);
+    });
+
+    it('alterarFiltroDataInicio atualiza o filtro e recarrega', () => {
+      movimentacaoService.listar.mockClear();
+      component.alterarFiltroDataInicio(eventoDeValor('2026-07-01'));
+
+      expect(component.filtroDataInicio).toBe('2026-07-01');
+      expect(component.temFiltroPeriodo).toBe(true);
+      expect(movimentacaoService.listar).toHaveBeenCalledWith({
+        produtoId: 3, dataInicio: '2026-07-01', dataFim: undefined,
+      });
+    });
+
+    it('alterarFiltroDataFim atualiza o filtro e recarrega', () => {
+      movimentacaoService.listar.mockClear();
+      component.alterarFiltroDataFim(eventoDeValor('2026-07-31'));
+
+      expect(component.filtroDataFim).toBe('2026-07-31');
+      expect(movimentacaoService.listar).toHaveBeenCalledWith({
+        produtoId: 3, dataInicio: undefined, dataFim: '2026-07-31',
+      });
+    });
+
+    it('limparFiltroPeriodo reseta os dois campos e recarrega', () => {
+      component.alterarFiltroDataInicio(eventoDeValor('2026-07-01'));
+      component.alterarFiltroDataFim(eventoDeValor('2026-07-31'));
+      movimentacaoService.listar.mockClear();
+
+      component.limparFiltroPeriodo();
+
+      expect(component.filtroDataInicio).toBe('');
+      expect(component.filtroDataFim).toBe('');
+      expect(component.temFiltroPeriodo).toBe(false);
+      expect(movimentacaoService.listar).toHaveBeenCalledWith({
+        produtoId: 3, dataInicio: undefined, dataFim: undefined,
+      });
+    });
   });
 });
