@@ -87,8 +87,8 @@ describe('ProdutoService', () => {
     req.flush(produto);
   });
 
-  it('remove um produto via DELETE', () => {
-    service.remover(1).subscribe();
+  it('inativa um produto via DELETE', () => {
+    service.inativar(1).subscribe();
     const req = httpMock.expectOne(`${API_URL}1/`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);

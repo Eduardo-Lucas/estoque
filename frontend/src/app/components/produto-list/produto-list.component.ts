@@ -28,7 +28,7 @@ export class ProdutoListComponent implements OnInit, OnDestroy {
   erro = '';
   sucesso = '';
 
-  produtoParaRemover: Produto | null = null;
+  produtoParaInativar: Produto | null = null;
 
   pagina = 1;
   tamanhoPagina = 10;
@@ -157,30 +157,30 @@ export class ProdutoListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/produtos', produto.id, 'historico']);
   }
 
-  pedirRemocao(produto: Produto): void {
-    this.produtoParaRemover = produto;
+  pedirInativacao(produto: Produto): void {
+    this.produtoParaInativar = produto;
   }
 
-  cancelarRemocao(): void {
-    this.produtoParaRemover = null;
+  cancelarInativacao(): void {
+    this.produtoParaInativar = null;
   }
 
-  confirmarRemocao(): void {
-    const produto = this.produtoParaRemover;
+  confirmarInativacao(): void {
+    const produto = this.produtoParaInativar;
     if (!produto?.id) return;
 
     this.erro = '';
     this.sucesso = '';
 
-    this.produtoService.remover(produto.id).subscribe({
+    this.produtoService.inativar(produto.id).subscribe({
       next: () => {
-        this.sucesso = 'Produto removido com sucesso.';
-        this.produtoParaRemover = null;
+        this.sucesso = 'Produto inativado com sucesso.';
+        this.produtoParaInativar = null;
         this.carregar();
       },
       error: (err) => {
         this.erro = err.message;
-        this.produtoParaRemover = null;
+        this.produtoParaInativar = null;
       },
     });
   }

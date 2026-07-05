@@ -36,7 +36,11 @@ estoque/
   fornecedor, unidade de medida, quantidade, estoque mínimo, preço de custo,
   preço de venda e status ativo/inativo.
 - **Categorias** e **Fornecedores**: CRUD completo, usados como referência
-  no cadastro de produtos.
+  no cadastro de produtos. Também têm status ativo/inativo.
+- **Inativação em vez de exclusão**: Produtos, Categorias e Fornecedores nunca
+  são removidos do banco. O botão de remoção nas listagens (e o `DELETE` da
+  API) apenas define `ativo=False`; o registro pode ser reativado depois,
+  editando o cadastro e marcando o campo "ativo" novamente.
 - **Requisição / Devolução de estoque**: registra movimentações e ajusta a
   quantidade do produto automaticamente, dentro de uma transação atômica.
   Bloqueia requisições que excedam o estoque disponível.
@@ -69,11 +73,12 @@ estoque/
 ### Padrão de telas
 
 Toda entidade (Produto, Categoria, Fornecedor) segue o mesmo padrão de UI:
-a lista tem um botão **"+ Criar"** no topo e um botão **"Editar"** por linha;
-ambos levam a uma tela de formulário separada (`.../novo` ou `.../:id/editar`),
-que decide entre criar e atualizar conforme a presença do `id` na rota. As
-listas em si só mostram dados e ações de CRUD — import/export de arquivo
-(CSV/NF-e) fica centralizado na tela **Importações**, não em cada lista.
+a lista tem um botão **"+ Criar"** no topo e, por linha, os botões **"Editar"**
+e **"Inativar"** (só aparece em registros ativos); ambos os cadastros levam a
+uma tela de formulário separada (`.../novo` ou `.../:id/editar`), que decide
+entre criar e atualizar conforme a presença do `id` na rota. As listas em si
+só mostram dados e essas ações — import/export de arquivo (CSV/NF-e) fica
+centralizado na tela **Importações**, não em cada lista.
 
 ## Como rodar
 
@@ -92,14 +97,15 @@ python manage.py runserver
 API disponível em `http://localhost:8000/api/` (autenticação por token
 obrigatória, exceto `POST /api/auth/token/`):
 - `GET/POST /api/produtos/`, `GET/PUT/DELETE /api/produtos/{id}/`
-  (`GET` aceita `?nome=`, `?categoria=<id>`, `?fornecedor=<id>` para filtrar)
+  (`GET` aceita `?nome=`, `?categoria=<id>`, `?fornecedor=<id>` para filtrar;
+  `DELETE` inativa — define `ativo=False` — em vez de remover o registro)
 - `POST /api/produtos/importar_csv/`, `GET /api/produtos/exportar_csv/`
 - `POST /api/produtos/importar_nfe/` — dá entrada em estoque a partir do XML de uma NF-e de compra
 - `GET/POST /api/categorias/`, `GET/PUT/DELETE /api/categorias/{id}/`
-  (`GET` aceita `?nome=` para filtrar)
+  (`GET` aceita `?nome=` para filtrar; `DELETE` inativa em vez de remover)
 - `POST /api/categorias/importar_csv/`, `GET /api/categorias/exportar_csv/`
 - `GET/POST /api/fornecedores/`, `GET/PUT/DELETE /api/fornecedores/{id}/`
-  (`GET` aceita `?nome=` para filtrar)
+  (`GET` aceita `?nome=` para filtrar; `DELETE` inativa em vez de remover)
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
 - `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto
 - `POST /api/auth/token/` — login, retorna o token do usuário

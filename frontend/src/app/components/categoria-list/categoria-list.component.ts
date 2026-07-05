@@ -20,7 +20,7 @@ export class CategoriaListComponent implements OnInit, OnDestroy {
   erro = '';
   sucesso = '';
 
-  categoriaParaRemover: Categoria | null = null;
+  categoriaParaInativar: Categoria | null = null;
 
   filtroNome = '';
   private debounceFiltroNome?: ReturnType<typeof setTimeout>;
@@ -70,30 +70,30 @@ export class CategoriaListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/categorias', categoria.id, 'editar']);
   }
 
-  pedirRemocao(categoria: Categoria): void {
-    this.categoriaParaRemover = categoria;
+  pedirInativacao(categoria: Categoria): void {
+    this.categoriaParaInativar = categoria;
   }
 
-  cancelarRemocao(): void {
-    this.categoriaParaRemover = null;
+  cancelarInativacao(): void {
+    this.categoriaParaInativar = null;
   }
 
-  confirmarRemocao(): void {
-    const categoria = this.categoriaParaRemover;
+  confirmarInativacao(): void {
+    const categoria = this.categoriaParaInativar;
     if (!categoria?.id) return;
 
     this.erro = '';
     this.sucesso = '';
 
-    this.categoriaService.remover(categoria.id).subscribe({
+    this.categoriaService.inativar(categoria.id).subscribe({
       next: () => {
-        this.sucesso = 'Categoria removida com sucesso.';
-        this.categoriaParaRemover = null;
+        this.sucesso = 'Categoria inativada com sucesso.';
+        this.categoriaParaInativar = null;
         this.carregar();
       },
       error: (err) => {
         this.erro = err.message;
-        this.categoriaParaRemover = null;
+        this.categoriaParaInativar = null;
       },
     });
   }

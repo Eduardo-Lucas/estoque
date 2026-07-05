@@ -32,6 +32,7 @@ export class FornecedorFormComponent implements OnInit {
     telefone: [''],
     email: ['', Validators.email],
     endereco: [''],
+    ativo: [true],
   });
 
   ngOnInit(): void {
@@ -52,6 +53,7 @@ export class FornecedorFormComponent implements OnInit {
           telefone: fornecedor.telefone ?? '',
           email: fornecedor.email ?? '',
           endereco: fornecedor.endereco ?? '',
+          ativo: fornecedor.ativo ?? true,
         });
         this.carregando = false;
       },

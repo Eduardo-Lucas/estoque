@@ -16,6 +16,12 @@
       <label>Descrição</label>
       <input formControlName="descricao" name="descricao" placeholder="Opcional">
     </div>
+    <div class="campo-checkbox">
+      <label>
+        <input type="checkbox" formControlName="ativo" name="ativo">
+        Categoria ativa
+      </label>
+    </div>
     <div>
       <button type="submit">{{ emEdicao ? 'Salvar alterações' : 'Adicionar categoria' }}</button>
       <button type="button" class="secondary" (click)="cancelar()">Cancelar</button>

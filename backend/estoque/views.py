@@ -181,6 +181,17 @@ def _exportar_csv_simples(queryset, nome_arquivo, colunas, extrair_linha):
     return response
 
 
+class InativarAoRemoverMixin:
+    """
+    Substitui o comportamento padrão do DELETE: em vez de remover o registro
+    do banco, marca ativo=False. Nenhuma entidade do sistema (Produto,
+    Categoria, Fornecedor) é de fato excluída — só deixa de aparecer como ativa.
+    """
+    def perform_destroy(self, instance):
+        instance.ativo = False
+        instance.save(update_fields=['ativo'])
+
+
 def _buscar_produto_por_item_nfe(item_nfe):
     """Casa um item da NF-e com um Produto existente por SKU (código do
     fornecedor) ou, na falta desse match, por nome. Nunca cria produto novo."""
@@ -208,14 +219,14 @@ def _obter_ou_criar_fornecedor_por_nfe(emitente):
     return fornecedor
 
 
-class ProdutoViewSet(viewsets.ModelViewSet):
+class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
     """
     CRUD completo de produtos.
     GET    /api/produtos/       -> lista (aceita ?nome=, ?categoria=<id>, ?fornecedor=<id> para filtrar)
     POST   /api/produtos/       -> cria
     GET    /api/produtos/{id}/  -> detalhe
     PUT    /api/produtos/{id}/  -> atualiza
-    DELETE /api/produtos/{id}/  -> remove
+    DELETE /api/produtos/{id}/  -> inativa (define ativo=False; não remove o registro)
     """
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
@@ -475,8 +486,11 @@ class ProdutoViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
-class CategoriaViewSet(viewsets.ModelViewSet):
-    """CRUD de categorias de produto. GET aceita ?nome=<texto> para filtrar."""
+class CategoriaViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
+    """
+    CRUD de categorias de produto. GET aceita ?nome=<texto> para filtrar.
+    DELETE inativa (define ativo=False) em vez de remover o registro.
+    """
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
 
@@ -506,8 +520,11 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         )
 
 
-class FornecedorViewSet(viewsets.ModelViewSet):
-    """CRUD de fornecedores. GET aceita ?nome=<texto> para filtrar."""
+class FornecedorViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
+    """
+    CRUD de fornecedores. GET aceita ?nome=<texto> para filtrar.
+    DELETE inativa (define ativo=False) em vez de remover o registro.
+    """
     queryset = Fornecedor.objects.all()
     serializer_class = FornecedorSerializer
 

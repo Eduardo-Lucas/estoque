@@ -4,6 +4,7 @@ from django.db import models
 class Categoria(models.Model):
     nome = models.CharField(max_length=100, unique=True)
     descricao = models.TextField(blank=True)
+    ativo = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['nome']
@@ -19,6 +20,7 @@ class Fornecedor(models.Model):
     telefone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     endereco = models.CharField(max_length=255, blank=True)
+    ativo = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['nome']

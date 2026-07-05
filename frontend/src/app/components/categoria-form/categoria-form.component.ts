@@ -29,6 +29,7 @@ export class CategoriaFormComponent implements OnInit {
   form = this.fb.nonNullable.group({
     nome: ['', [Validators.required, Validators.minLength(2)]],
     descricao: [''],
+    ativo: [true],
   });
 
   ngOnInit(): void {
@@ -43,7 +44,11 @@ export class CategoriaFormComponent implements OnInit {
     this.carregando = true;
     this.categoriaService.obter(id).subscribe({
       next: (categoria) => {
-        this.form.setValue({ nome: categoria.nome, descricao: categoria.descricao ?? '' });
+        this.form.setValue({
+          nome: categoria.nome,
+          descricao: categoria.descricao ?? '',
+          ativo: categoria.ativo ?? true,
+        });
         this.carregando = false;
       },
       error: () => {

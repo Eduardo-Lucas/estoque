@@ -14,7 +14,7 @@ describe('ProdutoListComponent', () => {
   let component: ProdutoListComponent;
   let produtoService: {
     listar: jest.Mock;
-    remover: jest.Mock;
+    inativar: jest.Mock;
   };
   let categoriaService: { listar: jest.Mock };
   let fornecedorService: { listar: jest.Mock };
@@ -41,7 +41,7 @@ describe('ProdutoListComponent', () => {
   beforeEach(async () => {
     produtoService = {
       listar: jest.fn().mockReturnValue(of(respostaPaginada([produto]))),
-      remover: jest.fn().mockReturnValue(of(undefined)),
+      inativar: jest.fn().mockReturnValue(of(undefined)),
     };
     categoriaService = { listar: jest.fn().mockReturnValue(of(respostaPaginada([categoria]))) };
     fornecedorService = { listar: jest.fn().mockReturnValue(of(respostaPaginada([fornecedor]))) };
@@ -235,30 +235,30 @@ describe('ProdutoListComponent', () => {
     });
   });
 
-  describe('remoção', () => {
-    it('pedirRemocao guarda o produto e cancelarRemocao limpa', () => {
-      component.pedirRemocao(produto);
-      expect(component.produtoParaRemover).toEqual(produto);
-      component.cancelarRemocao();
-      expect(component.produtoParaRemover).toBeNull();
+  describe('inativação', () => {
+    it('pedirInativacao guarda o produto e cancelarInativacao limpa', () => {
+      component.pedirInativacao(produto);
+      expect(component.produtoParaInativar).toEqual(produto);
+      component.cancelarInativacao();
+      expect(component.produtoParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao remove o produto e recarrega a lista', () => {
-      component.pedirRemocao(produto);
-      component.confirmarRemocao();
+    it('confirmarInativacao inativa o produto e recarrega a lista', () => {
+      component.pedirInativacao(produto);
+      component.confirmarInativacao();
 
-      expect(produtoService.remover).toHaveBeenCalledWith(produto.id);
-      expect(component.sucesso).toBe('Produto removido com sucesso.');
-      expect(component.produtoParaRemover).toBeNull();
+      expect(produtoService.inativar).toHaveBeenCalledWith(produto.id);
+      expect(component.sucesso).toBe('Produto inativado com sucesso.');
+      expect(component.produtoParaInativar).toBeNull();
     });
 
-    it('confirmarRemocao trata erro do backend', () => {
-      produtoService.remover.mockReturnValue(throwError(() => new Error('falha ao remover')));
-      component.pedirRemocao(produto);
-      component.confirmarRemocao();
+    it('confirmarInativacao trata erro do backend', () => {
+      produtoService.inativar.mockReturnValue(throwError(() => new Error('falha ao inativar')));
+      component.pedirInativacao(produto);
+      component.confirmarInativacao();
 
-      expect(component.erro).toBe('falha ao remover');
-      expect(component.produtoParaRemover).toBeNull();
+      expect(component.erro).toBe('falha ao inativar');
+      expect(component.produtoParaInativar).toBeNull();
     });
   });
 });

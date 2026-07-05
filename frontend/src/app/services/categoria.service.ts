@@ -35,7 +35,8 @@ export class CategoriaService {
     return this.http.put<Categoria>(`${API_URL}${id}/`, categoria);
   }
 
-  remover(id: number): Observable<void> {
+  // DELETE /api/categorias/{id}/  -> inativa a categoria (define ativo=false; não remove o registro)
+  inativar(id: number): Observable<void> {
     return this.http.delete<void>(`${API_URL}${id}/`);
   }
 

@@ -20,7 +20,7 @@ export class FornecedorListComponent implements OnInit, OnDestroy {
   erro = '';
   sucesso = '';
 
-  fornecedorParaRemover: Fornecedor | null = null;
+  fornecedorParaInativar: Fornecedor | null = null;
 
   filtroNome = '';
   private debounceFiltroNome?: ReturnType<typeof setTimeout>;
@@ -70,30 +70,30 @@ export class FornecedorListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/fornecedores', fornecedor.id, 'editar']);
   }
 
-  pedirRemocao(fornecedor: Fornecedor): void {
-    this.fornecedorParaRemover = fornecedor;
+  pedirInativacao(fornecedor: Fornecedor): void {
+    this.fornecedorParaInativar = fornecedor;
   }
 
-  cancelarRemocao(): void {
-    this.fornecedorParaRemover = null;
+  cancelarInativacao(): void {
+    this.fornecedorParaInativar = null;
   }
 
-  confirmarRemocao(): void {
-    const fornecedor = this.fornecedorParaRemover;
+  confirmarInativacao(): void {
+    const fornecedor = this.fornecedorParaInativar;
     if (!fornecedor?.id) return;
 
     this.erro = '';
     this.sucesso = '';
 
-    this.fornecedorService.remover(fornecedor.id).subscribe({
+    this.fornecedorService.inativar(fornecedor.id).subscribe({
       next: () => {
-        this.sucesso = 'Fornecedor removido com sucesso.';
-        this.fornecedorParaRemover = null;
+        this.sucesso = 'Fornecedor inativado com sucesso.';
+        this.fornecedorParaInativar = null;
         this.carregar();
       },
       error: (err) => {
         this.erro = err.message;
-        this.fornecedorParaRemover = null;
+        this.fornecedorParaInativar = null;
       },
     });
   }

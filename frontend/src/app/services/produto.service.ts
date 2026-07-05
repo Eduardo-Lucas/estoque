@@ -49,8 +49,8 @@ export class ProdutoService {
     return this.http.put<Produto>(`${API_URL}${id}/`, produto);
   }
 
-  // DELETE /api/produtos/{id}/  -> remove um produto
-  remover(id: number): Observable<void> {
+  // DELETE /api/produtos/{id}/  -> inativa um produto (define ativo=false; não remove o registro)
+  inativar(id: number): Observable<void> {
     return this.http.delete<void>(`${API_URL}${id}/`);
   }
 
