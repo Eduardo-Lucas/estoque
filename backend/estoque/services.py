@@ -159,8 +159,8 @@ class ServicoEstoque:
 
     @staticmethod
     @transaction.atomic
-    def registrar_entrada(*, produto: Produto, quantidade: Decimal, custo_unitario: Decimal = None,
-                           empresa=None, deposito=None, usuario=None, lote=None,
+    def registrar_entrada(*, produto: Produto, quantidade: Decimal, usuario, custo_unitario: Decimal = None,
+                           empresa=None, deposito=None, lote=None,
                            tipo=Movimentacao.COMPRA, observacao='') -> Movimentacao:
         empresa = empresa or produto.empresa
         deposito = deposito or ServicoEstoque.get_deposito_padrao(empresa)
@@ -176,15 +176,15 @@ class ServicoEstoque:
             tipo=tipo, quantidade=quantidade, custo_unitario=custo_unitario,
             usuario=usuario, observacao=observacao,
         )
-        movimento.full_clean(exclude=['usuario'])
+        movimento.full_clean()
         estrategia = obter_estrategia(empresa.config_estoque)
         estrategia.processar_entrada(movimento, saldo)
         return movimento
 
     @staticmethod
     @transaction.atomic
-    def registrar_saida(*, produto: Produto, quantidade: Decimal, empresa=None, deposito=None,
-                         usuario=None, lote=None, tipo=Movimentacao.REQUISICAO,
+    def registrar_saida(*, produto: Produto, quantidade: Decimal, usuario, empresa=None, deposito=None,
+                         lote=None, tipo=Movimentacao.REQUISICAO,
                          observacao='', solicitante='') -> Movimentacao:
         empresa = empresa or produto.empresa
         deposito = deposito or ServicoEstoque.get_deposito_padrao(empresa)
@@ -203,14 +203,14 @@ class ServicoEstoque:
             tipo=tipo, quantidade=quantidade, usuario=usuario,
             observacao=observacao, solicitante=solicitante,
         )
-        movimento.full_clean(exclude=['usuario'])
+        movimento.full_clean()
         estrategia = obter_estrategia(empresa.config_estoque)
         estrategia.processar_saida(movimento, saldo)
         movimento.save(update_fields=['custo_unitario'])
         return movimento
 
     @staticmethod
-    def definir_saldo_inicial(produto, quantidade, *, deposito=None, observacao='', usuario=None):
+    def definir_saldo_inicial(produto, quantidade, *, usuario, deposito=None, observacao=''):
         """Usado pela importação de CSV: reconcilia o saldo atual com o valor
         da planilha através de um ajuste de inventário (com histórico), em
         vez de sobrescrever o saldo silenciosamente."""
