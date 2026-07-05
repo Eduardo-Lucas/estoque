@@ -30,6 +30,192 @@ estoque/
                               importações, login, registro, confirmar-email)
 ```
 
+## Modelo de dados
+
+```mermaid
+erDiagram
+    EMPRESA ||--o| CONFIGURACAO_ESTOQUE : "config_estoque"
+    EMPRESA ||--o{ CATEGORIA : "categorias"
+    EMPRESA ||--o{ FORNECEDOR : "fornecedores"
+    EMPRESA ||--o{ DEPOSITO : "depositos"
+    EMPRESA ||--o{ PRODUTO : "produtos"
+    EMPRESA ||--o{ MOVIMENTACAO : "movimentacoes"
+    EMPRESA ||--o{ SALDO_ESTOQUE : "saldos"
+    EMPRESA ||--o{ NOTA_FISCAL_COMPRA : "notas_fiscais"
+
+    CATEGORIA ||--o{ PRODUTO : "produtos (opcional)"
+    FORNECEDOR ||--o{ PRODUTO : "produtos (opcional)"
+    FORNECEDOR ||--o{ NOTA_FISCAL_COMPRA : "notas_fiscais (opcional)"
+
+    PRODUTO ||--o{ LOTE : "lotes"
+    PRODUTO ||--o{ MOVIMENTACAO : "movimentacoes"
+    PRODUTO ||--o{ SALDO_ESTOQUE : "saldos"
+    PRODUTO ||--o{ CAMADA_CUSTO : "camadas_custo"
+    PRODUTO ||--o{ ITEM_NOTA_FISCAL : "itens_nfe (opcional)"
+
+    DEPOSITO ||--o{ MOVIMENTACAO : "movimentacoes"
+    DEPOSITO ||--o{ SALDO_ESTOQUE : "saldos"
+    DEPOSITO ||--o{ CAMADA_CUSTO : "camadas_custo"
+
+    LOTE ||--o{ MOVIMENTACAO : "movimentacoes (opcional)"
+    LOTE ||--o{ SALDO_ESTOQUE : "saldos (opcional)"
+    LOTE ||--o{ CAMADA_CUSTO : "camadas_custo (opcional)"
+
+    MOVIMENTACAO ||--o{ CAMADA_CUSTO : "camada_gerada"
+    MOVIMENTACAO ||--o{ ITEM_NOTA_FISCAL : "vinculo (opcional)"
+
+    USUARIO ||--o{ MOVIMENTACAO : "usuario (obrigatorio)"
+
+    NOTA_FISCAL_COMPRA ||--o{ ITEM_NOTA_FISCAL : "itens"
+
+    EMPRESA {
+        bigint id PK
+        string razao_social
+        string nome_fantasia
+        string cnpj UK
+        bool ativo
+        datetime criado_em
+    }
+
+    CONFIGURACAO_ESTOQUE {
+        bigint id PK
+        bigint empresa_id FK "OneToOne, UK"
+        string regime_tributario
+        string metodo_valoracao
+        bool permite_estoque_negativo
+        bool controla_lote_por_padrao
+        bool multi_deposito
+    }
+
+    CATEGORIA {
+        bigint id PK
+        bigint empresa_id FK
+        string nome "UK(empresa+nome)"
+        text descricao
+        bool ativo
+    }
+
+    FORNECEDOR {
+        bigint id PK
+        bigint empresa_id FK
+        string nome "UK(empresa+nome)"
+        string cnpj
+        string telefone
+        string email
+        string endereco
+        bool ativo
+    }
+
+    DEPOSITO {
+        bigint id PK
+        bigint empresa_id FK
+        string codigo "UK(empresa+codigo)"
+        string nome
+        bool ativo
+    }
+
+    PRODUTO {
+        bigint id PK
+        bigint empresa_id FK
+        string nome
+        string sku "NULL, UK(empresa+sku)"
+        string codigo_barras
+        text descricao
+        bigint categoria_id FK "NULL"
+        bigint fornecedor_id FK "NULL"
+        string unidade_medida
+        int estoque_minimo
+        decimal preco_custo_referencia
+        decimal preco
+        bool controla_lote "NULL = herda config"
+        bool permite_estoque_negativo "NULL = herda config"
+        bool ativo
+        datetime criado_em
+        datetime atualizado_em
+    }
+
+    LOTE {
+        bigint id PK
+        bigint produto_id FK "UK(produto+numero_lote)"
+        string numero_lote
+        date data_fabricacao
+        date data_validade
+    }
+
+    MOVIMENTACAO {
+        bigint id PK
+        bigint empresa_id FK
+        bigint produto_id FK
+        bigint deposito_id FK
+        bigint lote_id FK "NULL"
+        string tipo
+        decimal quantidade
+        decimal custo_unitario "NULL"
+        string solicitante
+        bigint usuario_id FK "obrigatorio"
+        text observacao
+        datetime data
+    }
+
+    SALDO_ESTOQUE {
+        bigint id PK
+        bigint empresa_id FK
+        bigint produto_id FK "UK(produto+deposito+lote)"
+        bigint deposito_id FK
+        bigint lote_id FK "NULL"
+        decimal quantidade
+        decimal custo_medio
+        decimal quantidade_reservada
+        datetime atualizado_em
+    }
+
+    CAMADA_CUSTO {
+        bigint id PK
+        bigint produto_id FK
+        bigint deposito_id FK
+        bigint lote_id FK "NULL"
+        bigint movimento_origem_id FK
+        decimal quantidade_original
+        decimal quantidade_disponivel "CHECK >= 0"
+        decimal custo_unitario
+        datetime criado_em
+    }
+
+    NOTA_FISCAL_COMPRA {
+        bigint id PK
+        bigint empresa_id FK
+        string chave_acesso UK
+        string numero
+        bigint fornecedor_id FK "NULL"
+        decimal valor_total
+        datetime data_emissao
+        datetime importado_em
+    }
+
+    ITEM_NOTA_FISCAL {
+        bigint id PK
+        bigint nota_fiscal_id FK "UK(nota_fiscal+numero_item)"
+        int numero_item
+        string codigo_produto_fornecedor
+        string descricao
+        decimal quantidade
+        decimal valor_unitario
+        bigint produto_id FK "NULL"
+        bigint movimentacao_id FK "NULL"
+        bool processado
+    }
+
+    USUARIO {
+        bigint id PK
+        string email UK
+        bigint empresa_id FK "NULL (só admin sem empresa)"
+    }
+```
+
+Diagrama reflete o schema atual em `backend/estoque/models.py` e
+`backend/contas/models.py` (`NOTA_FISCAL_COMPRA`/`ITEM_NOTA_FISCAL` no
+diagrama são `NotaFiscalCompra`/`ItemNotaFiscalCompra` no código).
+
 ## Funcionalidades
 
 - **Autenticação por token** (DRF Token Auth) **com login por e-mail**: o
