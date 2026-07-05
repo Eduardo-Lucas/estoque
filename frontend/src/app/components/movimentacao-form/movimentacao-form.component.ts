@@ -11,6 +11,8 @@ import {
 import { Observable, catchError, map, of } from 'rxjs';
 import { Produto } from '../../models/produto.model';
 import { Movimentacao, TIPO_MOVIMENTACAO_LABELS, TipoMovimentacao } from '../../models/movimentacao.model';
+
+const TIPOS_SAIDA: TipoMovimentacao[] = ['REQUISICAO', 'AJUSTE_NEGATIVO'];
 import { ProdutoService } from '../../services/produto.service';
 import { MovimentacaoService } from '../../services/movimentacao.service';
 import { AuthService } from '../../services/auth.service';
@@ -40,7 +42,7 @@ export class MovimentacaoFormComponent implements OnInit {
     {
       produto: [0, [Validators.required, Validators.min(1)]],
       tipo: ['REQUISICAO' as TipoMovimentacao, Validators.required],
-      quantidade: [1, [Validators.required, Validators.min(1)]],
+      quantidade: [1, [Validators.required, Validators.min(0.001)]],
       solicitante: [this.authService.usuario() ?? '', Validators.required],
       observacao: [''],
     },
@@ -81,10 +83,7 @@ export class MovimentacaoFormComponent implements OnInit {
     this.movimentacaoService.criar(this.form.getRawValue() as Movimentacao).subscribe({
       next: () => {
         const tipo = this.form.getRawValue().tipo;
-        this.sucesso =
-          tipo === 'REQUISICAO'
-            ? 'Requisição registrada e estoque atualizado.'
-            : 'Devolução registrada e estoque atualizado.';
+        this.sucesso = `${TIPO_MOVIMENTACAO_LABELS[tipo]} registrada e estoque atualizado.`;
         this.form.reset({
           produto: 0,
           tipo: 'REQUISICAO',
@@ -107,14 +106,15 @@ export class MovimentacaoFormComponent implements OnInit {
       const produtoId = group.get('produto')?.value;
       const quantidade = group.get('quantidade')?.value;
 
-      if (tipo !== 'REQUISICAO' || !produtoId || !quantidade || quantidade <= 0) {
+      if (!TIPOS_SAIDA.includes(tipo) || !produtoId || !quantidade || quantidade <= 0) {
         return of(null);
       }
 
       return this.produtoService.obter(produtoId).pipe(
-        map((produto) =>
-          quantidade > produto.quantidade ? { estoqueInsuficiente: { disponivel: produto.quantidade } } : null,
-        ),
+        map((produto) => {
+          const disponivel = Number(produto.saldo ?? 0);
+          return quantidade > disponivel ? { estoqueInsuficiente: { disponivel } } : null;
+        }),
         catchError(() => of(null)),
       );
     };

@@ -65,4 +65,8 @@ export class ProdutoHistoricoComponent implements OnInit {
   voltar(): void {
     this.router.navigate(['/produtos']);
   }
+
+  estoqueBaixo(produto: Produto): boolean {
+    return Number(produto.saldo ?? 0) <= produto.estoque_minimo;
+  }
 }

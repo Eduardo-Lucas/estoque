@@ -3,7 +3,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
 
-from estoque.models import Categoria, Fornecedor, Produto
+from estoque.models import Categoria, Fornecedor, Movimentacao, Produto
+from estoque.services import ServicoEstoque
 
 pytestmark = pytest.mark.django_db
 
@@ -14,15 +15,15 @@ def _arquivo_csv(conteudo_bytes, nome='produtos.csv'):
 
 class TestProdutoApiCrud:
     def test_criar_produto_minimo(self, api_client):
-        resposta = api_client.post(reverse('produto-list'), {'nome': 'Caneta Azul', 'quantidade': 10, 'preco': '1.50'})
+        resposta = api_client.post(reverse('produto-list'), {'nome': 'Caneta Azul', 'preco': '1.50'})
         assert resposta.status_code == status.HTTP_201_CREATED
         assert resposta.data['ativo'] is True
         assert resposta.data['unidade_medida'] == 'UN'
+        assert resposta.data['saldo'] == 0
 
     def test_criar_produto_com_categoria_e_fornecedor(self, api_client, categoria, fornecedor):
         resposta = api_client.post(reverse('produto-list'), {
             'nome': 'Furadeira',
-            'quantidade': 5,
             'preco': '199.90',
             'categoria': categoria.id,
             'fornecedor': fornecedor.id,
@@ -31,13 +32,9 @@ class TestProdutoApiCrud:
         assert resposta.data['categoria_nome'] == categoria.nome
         assert resposta.data['fornecedor_nome'] == fornecedor.nome
 
-    def test_nome_duplicado_e_rejeitado(self, api_client, produto):
-        resposta = api_client.post(reverse('produto-list'), {'nome': produto.nome, 'quantidade': 1, 'preco': '1.00'})
-        assert resposta.status_code == status.HTTP_400_BAD_REQUEST
-
     def test_sku_duplicado_e_rejeitado(self, api_client, produto):
         resposta = api_client.post(reverse('produto-list'), {
-            'nome': 'Outro nome', 'sku': produto.sku, 'quantidade': 1, 'preco': '1.00',
+            'nome': 'Outro nome', 'sku': produto.sku, 'preco': '1.00',
         })
         assert resposta.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -62,7 +59,7 @@ class TestProdutoApiCrud:
 
 class TestProdutoApiFiltros:
     def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, produto):
-        Produto.objects.create(nome='Martelo de Borracha', quantidade=1)
+        Produto.objects.create(empresa=produto.empresa, nome='Martelo de Borracha')
 
         resposta = api_client.get(reverse('produto-list'), {'nome': 'parafuso'})
 
@@ -74,8 +71,8 @@ class TestProdutoApiFiltros:
         assert resposta.data['count'] == 0
 
     def test_filtro_por_categoria(self, api_client, produto, categoria):
-        outra_categoria = Categoria.objects.create(nome='Elétrica')
-        Produto.objects.create(nome='Fita isolante', categoria=outra_categoria, quantidade=1)
+        outra_categoria = Categoria.objects.create(empresa=produto.empresa, nome='Elétrica')
+        Produto.objects.create(empresa=produto.empresa, nome='Fita isolante', categoria=outra_categoria)
 
         resposta = api_client.get(reverse('produto-list'), {'categoria': categoria.id})
 
@@ -83,8 +80,8 @@ class TestProdutoApiFiltros:
         assert resposta.data['results'][0]['nome'] == produto.nome
 
     def test_filtro_por_fornecedor(self, api_client, produto, fornecedor):
-        outro_fornecedor = Fornecedor.objects.create(nome='Distribuidora XYZ')
-        Produto.objects.create(nome='Cabo de aço', fornecedor=outro_fornecedor, quantidade=1)
+        outro_fornecedor = Fornecedor.objects.create(empresa=produto.empresa, nome='Distribuidora XYZ')
+        Produto.objects.create(empresa=produto.empresa, nome='Cabo de aço', fornecedor=outro_fornecedor)
 
         resposta = api_client.get(reverse('produto-list'), {'fornecedor': fornecedor.id})
 
@@ -92,7 +89,7 @@ class TestProdutoApiFiltros:
         assert resposta.data['results'][0]['nome'] == produto.nome
 
     def test_filtros_combinados(self, api_client, produto, categoria, fornecedor):
-        Produto.objects.create(nome='Parafuso 20mm', categoria=categoria, quantidade=1)
+        Produto.objects.create(empresa=produto.empresa, nome='Parafuso 20mm', categoria=categoria)
 
         resposta = api_client.get(
             reverse('produto-list'), {'nome': 'parafuso', 'categoria': categoria.id, 'fornecedor': fornecedor.id},
@@ -102,7 +99,7 @@ class TestProdutoApiFiltros:
         assert resposta.data['results'][0]['nome'] == produto.nome
 
     def test_sem_filtro_retorna_todos(self, api_client, produto):
-        Produto.objects.create(nome='Martelo de Borracha', quantidade=1)
+        Produto.objects.create(empresa=produto.empresa, nome='Martelo de Borracha')
         resposta = api_client.get(reverse('produto-list'))
         assert resposta.data['count'] == 2
 
@@ -126,7 +123,13 @@ class TestProdutoImportarCsv:
         assert produto_criado.fornecedor.nome == 'Distribuidora ABC'
         assert produto_criado.unidade_medida == 'CX'
         assert produto_criado.estoque_minimo == 10
-        assert str(produto_criado.preco_custo) == '5.00'
+        assert str(produto_criado.preco_custo_referencia) == '5.00'
+
+        # o saldo inicial é lançado como um ajuste de inventário, não escrito direto
+        assert ServicoEstoque.saldo_disponivel(produto_criado) == 50
+        movimentacao = Movimentacao.objects.get(produto=produto_criado)
+        assert movimentacao.tipo == Movimentacao.AJUSTE_POSITIVO
+        assert movimentacao.quantidade == 50
 
         # categoria e fornecedor não existiam e devem ter sido criados automaticamente
         assert Categoria.objects.filter(nome='Ferragens').exists()
@@ -140,7 +143,7 @@ class TestProdutoImportarCsv:
 
         assert resposta.data == {'criados': 0, 'atualizados': 1, 'erros': []}
         produto.refresh_from_db()
-        assert produto.quantidade == 999
+        assert ServicoEstoque.saldo_disponivel(produto) == 999
         assert str(produto.preco) == '15.00'
         # sku e categoria não vieram na linha (vazios) e devem permanecer intocados
         assert produto.sku == 'PRF-001'

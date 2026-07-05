@@ -3,7 +3,8 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from estoque.models import Categoria, Fornecedor, Produto
+from estoque.models import Categoria, Fornecedor, Produto, SaldoEstoque
+from estoque.services import ServicoEstoque
 
 
 @pytest.fixture
@@ -20,24 +21,41 @@ def api_client(usuario):
 
 
 @pytest.fixture
-def categoria(db):
-    return Categoria.objects.create(nome='Ferragens', descricao='Parafusos e afins')
+def empresa(db):
+    """A empresa 'padrão' já vem semeada por migration — os testes reaproveitam
+    essa mesma linha, já que hoje o sistema todo assume uma empresa só."""
+    return ServicoEstoque.get_empresa_padrao()
 
 
 @pytest.fixture
-def fornecedor(db):
-    return Fornecedor.objects.create(nome='Distribuidora ABC', email='contato@abc.com')
+def deposito(empresa):
+    return ServicoEstoque.get_deposito_padrao(empresa)
 
 
 @pytest.fixture
-def produto(db, categoria, fornecedor):
-    return Produto.objects.create(
+def categoria(empresa):
+    return Categoria.objects.create(empresa=empresa, nome='Ferragens', descricao='Parafusos e afins')
+
+
+@pytest.fixture
+def fornecedor(empresa):
+    return Fornecedor.objects.create(empresa=empresa, nome='Distribuidora ABC', email='contato@abc.com')
+
+
+@pytest.fixture
+def produto(empresa, categoria, fornecedor, deposito):
+    produto = Produto.objects.create(
+        empresa=empresa,
         nome='Parafuso 10mm',
         sku='PRF-001',
         categoria=categoria,
         fornecedor=fornecedor,
-        quantidade=100,
         estoque_minimo=10,
-        preco_custo='1.00',
+        preco_custo_referencia='1.00',
         preco='2.50',
     )
+    # Saldo inicial de teste é escrito direto (sem Movimentacao/ledger), do
+    # mesmo jeito que a fixture antiga só setava produto.quantidade=100 —
+    # é estado de partida do teste, não um evento de negócio a auditar.
+    SaldoEstoque.objects.create(empresa=empresa, produto=produto, deposito=deposito, quantidade=100)
+    return produto

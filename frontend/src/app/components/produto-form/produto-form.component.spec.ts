@@ -29,9 +29,8 @@ describe('ProdutoFormComponent', () => {
     categoria: 1,
     fornecedor: 1,
     unidade_medida: 'CX',
-    quantidade: 50,
     estoque_minimo: 10,
-    preco_custo: '5.00',
+    preco_custo_referencia: '5.00',
     preco: '9.90',
     ativo: true,
   };
@@ -82,7 +81,7 @@ describe('ProdutoFormComponent', () => {
 
     it('cria o produto e navega para /produtos', () => {
       produtoService.criar.mockReturnValue(of(produtoExistente));
-      component.form.patchValue({ nome: 'Produto Novo', quantidade: 5, preco: 10 });
+      component.form.patchValue({ nome: 'Produto Novo', preco: 10 });
 
       component.salvar();
 
@@ -95,7 +94,7 @@ describe('ProdutoFormComponent', () => {
 
     it('envia sku preenchido quando informado', () => {
       produtoService.criar.mockReturnValue(of(produtoExistente));
-      component.form.patchValue({ nome: 'Produto Novo', quantidade: 5, preco: 10, sku: 'ABC-1' });
+      component.form.patchValue({ nome: 'Produto Novo', preco: 10, sku: 'ABC-1' });
 
       component.salvar();
 
@@ -104,7 +103,7 @@ describe('ProdutoFormComponent', () => {
 
     it('trata erro ao salvar', () => {
       produtoService.criar.mockReturnValue(throwError(() => new Error('nome duplicado')));
-      component.form.patchValue({ nome: 'Produto Novo', quantidade: 5, preco: 10 });
+      component.form.patchValue({ nome: 'Produto Novo', preco: 10 });
 
       component.salvar();
 
@@ -133,9 +132,8 @@ describe('ProdutoFormComponent', () => {
         categoria: 1,
         fornecedor: 1,
         unidade_medida: 'CX',
-        quantidade: 50,
         estoque_minimo: 10,
-        preco_custo: 5,
+        preco_custo_referencia: 5,
         preco: 9.9,
       });
       expect(component.carregando).toBe(false);

@@ -1,12 +1,21 @@
 from django.contrib import admin
-from .models import Produto, Categoria, Fornecedor, Movimentacao, NotaFiscalCompra, ItemNotaFiscalCompra
+from django.db.models import Sum
+
+from .models import (
+    Categoria, Deposito, Empresa, Fornecedor, ItemNotaFiscalCompra, Movimentacao,
+    NotaFiscalCompra, Produto, SaldoEstoque,
+)
 
 
 @admin.register(Produto)
 class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'sku', 'categoria', 'fornecedor', 'quantidade', 'preco', 'ativo', 'atualizado_em')
+    list_display = ('nome', 'sku', 'categoria', 'fornecedor', 'saldo_total', 'preco', 'ativo', 'atualizado_em')
     list_filter = ('categoria', 'fornecedor', 'ativo')
     search_fields = ('nome', 'sku', 'codigo_barras')
+
+    @admin.display(description='saldo')
+    def saldo_total(self, produto):
+        return produto.saldos.aggregate(total=Sum('quantidade'))['total'] or 0
 
 
 @admin.register(Categoria)
@@ -23,8 +32,8 @@ class FornecedorAdmin(admin.ModelAdmin):
 
 @admin.register(Movimentacao)
 class MovimentacaoAdmin(admin.ModelAdmin):
-    list_display = ('produto', 'tipo', 'quantidade', 'solicitante', 'data')
-    list_filter = ('tipo',)
+    list_display = ('produto', 'tipo', 'quantidade', 'deposito', 'solicitante', 'data')
+    list_filter = ('tipo', 'deposito')
 
 
 class ItemNotaFiscalCompraInline(admin.TabularInline):
@@ -37,3 +46,21 @@ class NotaFiscalCompraAdmin(admin.ModelAdmin):
     list_display = ('numero', 'fornecedor', 'valor_total', 'data_emissao', 'importado_em')
     search_fields = ('numero', 'chave_acesso')
     inlines = [ItemNotaFiscalCompraInline]
+
+
+@admin.register(Empresa)
+class EmpresaAdmin(admin.ModelAdmin):
+    list_display = ('nome_fantasia', 'razao_social', 'cnpj', 'ativo')
+
+
+@admin.register(Deposito)
+class DepositoAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'codigo', 'empresa', 'ativo')
+    list_filter = ('empresa',)
+
+
+@admin.register(SaldoEstoque)
+class SaldoEstoqueAdmin(admin.ModelAdmin):
+    list_display = ('produto', 'deposito', 'quantidade', 'custo_medio', 'atualizado_em')
+    list_filter = ('deposito',)
+    search_fields = ('produto__nome',)
