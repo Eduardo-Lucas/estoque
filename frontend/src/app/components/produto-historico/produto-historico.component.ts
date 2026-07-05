@@ -28,6 +28,13 @@ export class ProdutoHistoricoComponent implements OnInit {
   carregandoMovimentacoes = false;
   erro = '';
 
+  filtroDataInicio = '';
+  filtroDataFim = '';
+
+  get temFiltroPeriodo(): boolean {
+    return !!this.filtroDataInicio || !!this.filtroDataFim;
+  }
+
   ngOnInit(): void {
     this.produtoId = Number(this.route.snapshot.paramMap.get('id'));
     this.carregarProduto();
@@ -50,7 +57,11 @@ export class ProdutoHistoricoComponent implements OnInit {
 
   carregarMovimentacoes(): void {
     this.carregandoMovimentacoes = true;
-    this.movimentacaoService.listar(this.produtoId).subscribe({
+    this.movimentacaoService.listar({
+      produtoId: this.produtoId,
+      dataInicio: this.filtroDataInicio || undefined,
+      dataFim: this.filtroDataFim || undefined,
+    }).subscribe({
       next: (resposta) => {
         this.movimentacoes = resposta.results;
         this.carregandoMovimentacoes = false;
@@ -60,6 +71,22 @@ export class ProdutoHistoricoComponent implements OnInit {
         this.carregandoMovimentacoes = false;
       },
     });
+  }
+
+  alterarFiltroDataInicio(event: Event): void {
+    this.filtroDataInicio = (event.target as HTMLInputElement).value;
+    this.carregarMovimentacoes();
+  }
+
+  alterarFiltroDataFim(event: Event): void {
+    this.filtroDataFim = (event.target as HTMLInputElement).value;
+    this.carregarMovimentacoes();
+  }
+
+  limparFiltroPeriodo(): void {
+    this.filtroDataInicio = '';
+    this.filtroDataFim = '';
+    this.carregarMovimentacoes();
   }
 
   voltar(): void {
