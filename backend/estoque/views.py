@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from . import nfe
 from .models import Produto, Categoria, Fornecedor, Movimentacao, NotaFiscalCompra, ItemNotaFiscalCompra
 from .serializers import ProdutoSerializer, CategoriaSerializer, FornecedorSerializer, MovimentacaoSerializer
-from .services import ServicoEstoque, SaldoInsuficienteError
+from .services import ServicoEstoque, SaldoInsuficienteError, TIPOS_ENTRADA
 
 
 def _formatar_erros(erros_por_campo):
@@ -306,7 +306,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 serializer = ProdutoSerializer(produto_existente, data=dados, partial=True)
                 if serializer.is_valid():
                     produto = serializer.save()
-                    ServicoEstoque.definir_saldo_inicial(produto, quantidade)
+                    ServicoEstoque.definir_saldo_inicial(produto, quantidade, usuario=request.user)
                     atualizados += 1
                 else:
                     erros.append({'linha': numero_linha, 'mensagem': _formatar_erros(serializer.errors)})
@@ -319,7 +319,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
             serializer = ProdutoSerializer(data=dados)
             if serializer.is_valid():
                 produto = serializer.save()
-                ServicoEstoque.definir_saldo_inicial(produto, quantidade)
+                ServicoEstoque.definir_saldo_inicial(produto, quantidade, usuario=request.user)
                 criados += 1
             else:
                 erros.append({'linha': numero_linha, 'mensagem': _formatar_erros(serializer.errors)})
@@ -437,12 +437,12 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 continue
 
             preco_serializer.save()
-            movimentacao = ServicoEstoque.registrar_movimentacao(
+            movimentacao = ServicoEstoque.registrar_entrada(
                 produto=produto,
                 tipo=Movimentacao.COMPRA,
                 quantidade=item_nfe.quantidade,
                 custo_unitario=item_nfe.valor_unitario,
-                solicitante=request.user.username,
+                usuario=request.user,
                 observacao=f'Compra via NF-e {dados.numero}',
             )
             item_registro.produto = produto
@@ -553,16 +553,27 @@ class MovimentacaoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dados = serializer.validated_data
+        tipo = dados['tipo']
 
         try:
-            movimentacao = ServicoEstoque.registrar_movimentacao(
-                produto=dados['produto'],
-                tipo=dados['tipo'],
-                quantidade=dados['quantidade'],
-                custo_unitario=dados.get('custo_unitario'),
-                solicitante=dados.get('solicitante', ''),
-                observacao=dados.get('observacao', ''),
-            )
+            if tipo in TIPOS_ENTRADA:
+                movimentacao = ServicoEstoque.registrar_entrada(
+                    produto=dados['produto'],
+                    quantidade=dados['quantidade'],
+                    custo_unitario=dados.get('custo_unitario'),
+                    usuario=request.user,
+                    tipo=tipo,
+                    observacao=dados.get('observacao', ''),
+                )
+            else:
+                movimentacao = ServicoEstoque.registrar_saida(
+                    produto=dados['produto'],
+                    quantidade=dados['quantidade'],
+                    usuario=request.user,
+                    tipo=tipo,
+                    observacao=dados.get('observacao', ''),
+                    solicitante=dados.get('solicitante', ''),
+                )
         except SaldoInsuficienteError as exc:
             raise ValidationError(exc.mensagem)
 
