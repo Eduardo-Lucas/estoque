@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 from django.core.exceptions import ValidationError
 
-from estoque.models import CamadaCusto, MetodoValoracao, Movimentacao, Produto
+from estoque.models import CamadaCusto, ConfiguracaoEstoque, Deposito, Empresa, MetodoValoracao, Movimentacao, Produto, SaldoEstoque
 from estoque.services import SaldoInsuficienteError, ServicoEstoque
 
 pytestmark = pytest.mark.django_db
@@ -113,3 +113,48 @@ class TestControlaLote:
 
         with pytest.raises(ValidationError):
             ServicoEstoque.registrar_entrada(produto=produto_zerado, quantidade=10, custo_unitario='1.00')
+
+
+class TestComparativoFifoVsMediaMovel:
+    """Mesmo cenário (duas entradas a custos diferentes, uma saída que atravessa
+    a fronteira entre as duas) rodado com cada estratégia, pra deixar explícito
+    que elas divergem tanto no custo da saída quanto no que fica em SaldoEstoque."""
+
+    def _rodar_cenario(self, metodo):
+        empresa = Empresa.objects.create(razao_social=f'Teste {metodo}', cnpj=f'CNPJ-{metodo}')
+        ConfiguracaoEstoque.objects.create(empresa=empresa, metodo_valoracao=metodo)
+        deposito = Deposito.objects.create(empresa=empresa, codigo='PADRAO', nome='Depósito Padrão')
+        produto = Produto.objects.create(empresa=empresa, nome='Parafuso M8', sku='PRF-M8')
+
+        ServicoEstoque.registrar_entrada(
+            empresa=empresa, produto=produto, deposito=deposito,
+            quantidade=Decimal('10'), custo_unitario=Decimal('10.00'),
+        )
+        ServicoEstoque.registrar_entrada(
+            empresa=empresa, produto=produto, deposito=deposito,
+            quantidade=Decimal('10'), custo_unitario=Decimal('14.00'),
+        )
+        saida = ServicoEstoque.registrar_saida(
+            empresa=empresa, produto=produto, deposito=deposito, quantidade=Decimal('12'),
+        )
+        saida.refresh_from_db()  # custo_unitario é quantizado só ao salvar no banco
+        saldo = SaldoEstoque.objects.get(empresa=empresa, produto=produto, deposito=deposito, lote=None)
+        return saida, saldo
+
+    def test_fifo_consome_a_camada_mais_antiga_e_depois_a_seguinte(self):
+        saida, saldo = self._rodar_cenario('fifo')
+
+        # 10 un a R$10,00 + 2 un a R$14,00 = R$128,00 / 12 = R$10,6667
+        assert saida.custo_unitario == Decimal('10.6667')
+        assert saldo.quantidade == Decimal('8.000')
+        # FIFO não mantém custo médio corrente em SaldoEstoque — só as camadas
+        # (CamadaCusto) sabem o custo real; isso fica 0 de propósito.
+        assert saldo.custo_medio == Decimal('0.0000')
+
+    def test_media_movel_pondera_as_duas_entradas_antes_da_saida(self):
+        saida, saldo = self._rodar_cenario('media_movel')
+
+        # custo médio após as entradas: (10*10 + 10*14) / 20 = R$12,00
+        assert saida.custo_unitario == Decimal('12.0000')
+        assert saldo.quantidade == Decimal('8.000')
+        assert saldo.custo_medio == Decimal('12.0000')
