@@ -1,39 +1,115 @@
-<section class="card login-card">
-  <h2>Entrar</h2>
+<section class="login-shell">
+  <div class="login-form-panel">
+    <p class="login-brand">📦 Controle de Estoque</p>
+    <h1 class="login-titulo">Bem-vindo</h1>
+    <p class="login-subtitulo">Entre com sua conta para acessar o estoque.</p>
 
-  <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+    <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
 
-  <form [formGroup]="form" (ngSubmit)="entrar()" class="form-grid">
-    <div>
-      <label>Usuário</label>
-      <input formControlName="username" name="username" placeholder="Usuário">
-    </div>
-
-    <div>
-      <label>Senha</label>
-      <div class="senha-wrapper">
-        <input [type]="senhaVisivel ? 'text' : 'password'" formControlName="password" name="password" placeholder="Senha">
-        <button
-          type="button"
-          class="toggle-senha"
-          (click)="alternarVisibilidadeSenha()"
-          [attr.aria-label]="senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'"
-          [attr.aria-pressed]="senhaVisivel"
-        >
-          <svg *ngIf="!senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-          <svg *ngIf="senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.87 3.88M14.12 14.12a3 3 0 1 1-4.24-4.24" />
-            <line x1="1" y1="1" x2="23" y2="23" />
-          </svg>
-        </button>
+    <form [formGroup]="form" (ngSubmit)="entrar()" class="login-form">
+      <div>
+        <label>Usuário</label>
+        <input formControlName="username" name="username" placeholder="Usuário" autocomplete="username">
       </div>
-    </div>
 
-    <div>
-      <button type="submit" [disabled]="carregando">{{ carregando ? 'Entrando...' : 'Entrar' }}</button>
-    </div>
-  </form>
+      <div>
+        <label>Senha</label>
+        <div class="senha-wrapper">
+          <input [type]="senhaVisivel ? 'text' : 'password'" formControlName="password" name="password" placeholder="Senha" autocomplete="current-password">
+          <button
+            type="button"
+            class="toggle-senha"
+            (click)="alternarVisibilidadeSenha()"
+            [attr.aria-label]="senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'"
+            [attr.aria-pressed]="senhaVisivel"
+          >
+            <svg *ngIf="!senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg *ngIf="senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.87 3.88M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="login-submit" [disabled]="carregando">{{ carregando ? 'Entrando...' : 'Entrar' }}</button>
+    </form>
+  </div>
+
+  <div class="login-illustration-panel" aria-hidden="true">
+    <svg viewBox="0 0 400 520" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <defs>
+        <linearGradient id="loginSkyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7dd3fc" />
+          <stop offset="100%" stop-color="#2563eb" />
+        </linearGradient>
+        <linearGradient id="loginArchGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fb923c" />
+          <stop offset="100%" stop-color="#c2410c" />
+        </linearGradient>
+      </defs>
+
+      <rect width="400" height="520" fill="url(#loginSkyGrad)" />
+
+      <!-- galpão/estante ao fundo, com um vão (como uma porta de doca) -->
+      <path
+        fill-rule="evenodd"
+        fill="url(#loginArchGrad)"
+        d="M20,360 C20,250 60,120 140,110 C180,105 220,105 260,110 C340,120 380,250 380,360 Z
+           M140,360 L140,220 C140,175 260,175 260,220 L260,360 Z"
+      />
+
+      <!-- caixas empilhadas, visíveis através do vão -->
+      <rect x="155" y="270" width="24" height="26" fill="#fde68a" />
+      <rect x="184" y="255" width="26" height="41" fill="#fcd34d" />
+      <rect x="215" y="278" width="22" height="18" fill="#fde68a" />
+
+      <!-- piso do galpão -->
+      <rect x="0" y="380" width="400" height="140" fill="#e0f2fe" />
+      <path d="M0,380 L400,380 L400,392 L0,404 Z" fill="#bae6fd" opacity="0.6" />
+
+      <!-- plástico bolha espalhado pelo chão (referência lúdica às ondas do original) -->
+      <g fill="#ffffff" opacity="0.55">
+        <circle cx="45" cy="420" r="6" />
+        <circle cx="62" cy="432" r="5" />
+        <circle cx="30" cy="440" r="4" />
+        <circle cx="355" cy="410" r="5" />
+        <circle cx="372" cy="430" r="6" />
+        <circle cx="340" cy="445" r="4" />
+        <circle cx="80" cy="470" r="5" />
+        <circle cx="320" cy="480" r="5" />
+      </g>
+
+      <!-- funcionário do estoque carregando uma caixa -->
+      <g>
+        <ellipse cx="200" cy="308" rx="21" ry="22" fill="#b06a45" />
+        <path d="M180,300 C180,280 220,280 220,300 C220,290 210,286 200,286 C190,286 180,290 180,300 Z" fill="#2b2118" />
+
+        <path d="M170,340 C170,335 230,335 230,340 L236,410 C236,418 164,418 164,410 Z" fill="#2563eb" />
+
+        <path d="M178,405 L188,405 L184,478 L172,478 Z" fill="#1e293b" />
+        <path d="M222,405 L212,405 L216,478 L228,478 Z" fill="#1e293b" />
+
+        <ellipse cx="168" cy="360" rx="10" ry="11" fill="#b06a45" />
+        <ellipse cx="232" cy="360" rx="10" ry="11" fill="#b06a45" />
+
+        <g>
+          <rect x="164" y="330" width="72" height="58" rx="3" fill="#d6a86a" />
+          <rect x="164" y="330" width="72" height="58" rx="3" fill="none" stroke="#a9784a" stroke-width="2" />
+          <line x1="200" y1="330" x2="200" y2="388" stroke="#a9784a" stroke-width="3" />
+          <line x1="176" y1="368" x2="182" y2="368" stroke="#8a6238" stroke-width="2" />
+          <line x1="186" y1="368" x2="190" y2="368" stroke="#8a6238" stroke-width="2" />
+          <line x1="194" y1="368" x2="202" y2="368" stroke="#8a6238" stroke-width="2" />
+          <line x1="206" y1="368" x2="210" y2="368" stroke="#8a6238" stroke-width="2" />
+          <line x1="214" y1="368" x2="224" y2="368" stroke="#8a6238" stroke-width="2" />
+        </g>
+      </g>
+
+      <text x="24" y="36" fill="#ffffff" font-size="15" font-weight="600" opacity="0.9">Controle de Estoque</text>
+      <text x="24" y="56" fill="#ffffff" font-size="11" opacity="0.7">organize · receba · distribua</text>
+    </svg>
+  </div>
 </section>

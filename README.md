@@ -30,8 +30,10 @@ estoque/
 
 ## Funcionalidades
 
-- **Autenticação por token** (DRF Token Auth): tela de login, guard de rotas
-  e interceptor HTTP que anexa o token e trata 401.
+- **Autenticação por token** (DRF Token Auth): guard de rotas e interceptor
+  HTTP que anexa o token e trata 401. A tela de login (`/login`) usa um
+  layout dividido — formulário à esquerda, ilustração temática de estoque
+  à direita (escondida em telas estreitas).
 - **Produtos**: cadastro completo — nome, SKU, código de barras, categoria,
   fornecedor, unidade de medida, quantidade, estoque mínimo, preço de custo,
   preço de venda e status ativo/inativo.
