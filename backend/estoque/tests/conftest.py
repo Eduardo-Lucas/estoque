@@ -1,15 +1,15 @@
 import pytest
-from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from contas.models import Usuario
 from estoque.models import Categoria, Fornecedor, Produto, SaldoEstoque
 from estoque.services import ServicoEstoque
 
 
 @pytest.fixture
 def usuario(db):
-    return User.objects.create_user(username='eduardo', password='senha-forte-123')
+    return Usuario.objects.create_user(email='eduardo@example.com', password='senha-forte-123')
 
 
 @pytest.fixture

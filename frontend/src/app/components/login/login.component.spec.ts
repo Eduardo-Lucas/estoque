@@ -29,24 +29,24 @@ describe('LoginComponent', () => {
     component.entrar();
 
     expect(authService.login).not.toHaveBeenCalled();
-    expect(component.form.get('username')?.touched).toBe(true);
+    expect(component.form.get('email')?.touched).toBe(true);
     expect(component.form.get('password')?.touched).toBe(true);
   });
 
   it('login bem-sucedido navega para /produtos', () => {
     authService.login.mockReturnValue(of({ token: 'abc' }));
-    component.form.setValue({ username: 'eduardo', password: 'senha123' });
+    component.form.setValue({ email: 'eduardo@example.com', password: 'senha123' });
 
     component.entrar();
 
-    expect(authService.login).toHaveBeenCalledWith({ username: 'eduardo', password: 'senha123' });
+    expect(authService.login).toHaveBeenCalledWith({ email: 'eduardo@example.com', password: 'senha123' });
     expect(component.carregando).toBe(false);
     expect(navigate).toHaveBeenCalledWith(['/produtos']);
   });
 
   it('login com erro exibe a mensagem e não navega', () => {
     authService.login.mockReturnValue(throwError(() => new Error('Credenciais inválidas.')));
-    component.form.setValue({ username: 'eduardo', password: 'errada' });
+    component.form.setValue({ email: 'eduardo@example.com', password: 'errada' });
 
     component.entrar();
 
