@@ -17,9 +17,9 @@ describe('MovimentacaoFormComponent', () => {
     id: 1,
     nome: 'Parafuso 10mm',
     unidade_medida: 'UN',
-    quantidade: 10,
+    saldo: 10,
     estoque_minimo: 0,
-    preco_custo: 0,
+    preco_custo_referencia: 0,
     preco: 0,
     ativo: true,
   };

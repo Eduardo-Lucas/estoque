@@ -1,5 +1,5 @@
 <section class="card">
-  <h2>Registrar requisição ou devolução</h2>
+  <h2>Registrar movimentação de estoque</h2>
 
   <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
   <div class="alert alert-success" *ngIf="sucesso">{{ sucesso }}</div>
@@ -13,7 +13,7 @@
       <select formControlName="produto" name="produto">
         <option [ngValue]="0" disabled>Selecione...</option>
         <option *ngFor="let produto of produtos" [ngValue]="produto.id">
-          {{ produto.nome }} (disponível: {{ produto.quantidade }})
+          {{ produto.nome }} (disponível: {{ produto.saldo }})
         </option>
       </select>
     </div>
@@ -23,12 +23,14 @@
       <select formControlName="tipo" name="tipo">
         <option value="REQUISICAO">Requisição (retira do estoque)</option>
         <option value="DEVOLUCAO">Devolução (retorna ao estoque)</option>
+        <option value="AJUSTE_POSITIVO">Ajuste de inventário (+)</option>
+        <option value="AJUSTE_NEGATIVO">Ajuste de inventário (-)</option>
       </select>
     </div>
 
     <div>
       <label>Quantidade</label>
-      <input type="number" min="1" formControlName="quantidade" name="quantidade">
+      <input type="number" min="0.001" step="0.001" formControlName="quantidade" name="quantidade">
     </div>
 
     <div>

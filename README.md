@@ -17,6 +17,7 @@ estoque/
 ├── backend/            Django + DRF
 │   ├── estoque_backend/    settings, urls raiz
 │   └── estoque/             app com models, serializers, views, urls, admin
+│       ├── services.py          ServicoEstoque — único ponto de escrita de saldo/ledger
 │       └── nfe.py               parsing puro do XML de NF-e (sem acesso a banco)
 └── frontend/           Angular (standalone components)
     └── src/app/
@@ -35,32 +36,49 @@ estoque/
   layout dividido — formulário à esquerda, ilustração temática de estoque
   à direita (escondida em telas estreitas).
 - **Produtos**: cadastro completo — nome, SKU, código de barras, categoria,
-  fornecedor, unidade de medida, quantidade, estoque mínimo, preço de custo,
-  preço de venda e status ativo/inativo.
+  fornecedor, unidade de medida, estoque mínimo, preço de custo de referência,
+  preço de venda e status ativo/inativo. O saldo em estoque **não é mais um
+  campo do produto** — é derivado do ledger de movimentações (ver abaixo).
 - **Categorias** e **Fornecedores**: CRUD completo, usados como referência
   no cadastro de produtos. Também têm status ativo/inativo.
 - **Inativação em vez de exclusão**: Produtos, Categorias e Fornecedores nunca
   são removidos do banco. O botão de remoção nas listagens (e o `DELETE` da
   API) apenas define `ativo=False`; o registro pode ser reativado depois,
   editando o cadastro e marcando o campo "ativo" novamente.
-- **Requisição / Devolução de estoque**: registra movimentações e ajusta a
-  quantidade do produto automaticamente, dentro de uma transação atômica.
-  Bloqueia requisições que excedam o estoque disponível.
+- **Saldo de estoque derivado do ledger**: `Produto` não guarda mais uma
+  quantidade mutável. Toda entrada/saída é uma `Movimentacao` (requisição,
+  devolução, compra, ajuste de inventário `+`/`-`), e o saldo/custo médio
+  ficam cacheados em `SaldoEstoque`, sempre recalculados por
+  `ServicoEstoque.registrar_movimentacao` (backend/estoque/services.py) numa
+  única transação com lock de linha — corrige uma condição de corrida que
+  existia na versão anterior (`Produto.quantidade +=/-=` sem lock). Compras
+  e ajustes positivos com `custo_unitario` informado atualizam o custo médio
+  móvel do produto. Requisições/ajustes negativos que deixariam o saldo
+  negativo são bloqueados.
+- **`Empresa`/`Deposito`**: modelos novos, mas ainda são só *scaffolding*
+  interno — uma única empresa e um único depósito "padrão" são semeados por
+  migration, sem tela, login por empresa ou qualquer filtro visível na API/
+  frontend ainda. Preparam o terreno para multi-tenant e múltiplos depósitos
+  numa PR futura.
 - **Histórico de movimentações por produto**: tela de detalhe
   (`/produtos/:id/historico`, acessível pelo botão "Histórico" na lista)
-  mostrando os dados do produto e só as movimentações daquele produto
-  (`GET /api/movimentacoes/?produto=<id>`).
+  mostrando os dados do produto (incluindo saldo atual) e só as
+  movimentações daquele produto (`GET /api/movimentacoes/?produto=<id>`).
 - **Importações** (tela própria em `/importacoes`, um item no menu principal):
   - **CSV** de Produtos, Categorias e Fornecedores: upsert por nome (atualiza
     o que já existe, cria o que não existe), células vazias não sobrescrevem
     valores já cadastrados, e categoria/fornecedor referenciados por nome são
-    criados automaticamente se não existirem.
+    criados automaticamente se não existirem. A coluna `quantidade` do CSV de
+    produtos não sobrescreve o saldo direto — gera um ajuste de inventário
+    (`AJUSTE_POSITIVO`/`AJUSTE_NEGATIVO`) com histórico.
   - **NF-e (XML)** de compra: dá entrada em estoque casando cada item da nota
-    com um produto existente por SKU (código do fornecedor) ou nome. Itens
-    sem correspondência **não criam produto automaticamente** — ficam
-    pendentes até o produto ser cadastrado manualmente e o mesmo arquivo ser
-    reimportado (reimportar é idempotente: itens já processados não duplicam
-    estoque).
+    com um produto existente por SKU (código do fornecedor) ou nome, via
+    `ServicoEstoque` (tipo `COMPRA`, atualizando custo médio pelo valor
+    unitário da nota). Itens sem correspondência **não criam produto
+    automaticamente** — ficam pendentes até o produto ser cadastrado
+    manualmente e o mesmo arquivo ser reimportado (reimportar é idempotente:
+    itens já processados não duplicam estoque). Quantidades fracionárias
+    (ex: 2,5 kg) são aceitas normalmente.
   - Arquivos de exemplo para testar a importação de CSV em `exemplos-csv/`
     (`categorias.csv`, `fornecedores.csv`).
 - **Paginação** nas listagens (a API aceita `?page=` e `?page_size=`).
@@ -138,14 +156,16 @@ python -m pytest                              # roda a suíte
 python -m pytest --cov=estoque --cov-report=term-missing   # com cobertura
 ```
 
-Testes em `estoque/tests/`: models (unicidade, defaults, `__str__`), API
-(CRUD, autenticação obrigatória, upsert de CSV, criação automática de
-categoria/fornecedor por nome, filtros de busca por nome/categoria/
-fornecedor) e a regra de negócio de estoque insuficiente em `Movimentacao`.
-`test_api_nfe.py` cobre o import de NF-e: matching por SKU/nome,
-reimportação idempotente (mesmo arquivo não duplica estoque), item
-pendente resolvido após cadastro manual + reimportação, quantidade
-fracionária rejeitada, e matching de fornecedor por CNPJ normalizado.
+Testes em `estoque/tests/`: models (unicidade por empresa, defaults,
+`__str__`), API (CRUD, autenticação obrigatória, upsert de CSV, criação
+automática de categoria/fornecedor por nome, filtros de busca por nome/
+categoria/fornecedor) e as regras de negócio de estoque em `Movimentacao`
+(saldo insuficiente bloqueado, ajuste de inventário `+`/`-`, saldo/custo
+médio sempre lidos via `ServicoEstoque`). `test_api_nfe.py` cobre o import
+de NF-e: matching por SKU/nome, reimportação idempotente (mesmo arquivo não
+duplica estoque), item pendente resolvido após cadastro manual +
+reimportação, quantidade fracionária aceita, e matching de fornecedor por
+CNPJ normalizado.
 
 ### Frontend (Jest + TestBed)
 
@@ -204,27 +224,37 @@ Exemplo: registrar uma requisição de produto.
    corpo em JSON.
 5. No backend, `MovimentacaoViewSet.create()` valida os dados
    (`MovimentacaoSerializer.validate`, que barra requisição maior que o
-   estoque disponível), salva a movimentação e **dentro da mesma transação**
-   ajusta a quantidade do produto.
+   saldo disponível) e delega para `ServicoEstoque.registrar_movimentacao`,
+   que grava a `Movimentacao` e atualiza o `SaldoEstoque` numa única
+   transação com lock de linha.
 6. A resposta (201 Created ou 400 com erro) volta pro Angular via
    `Observable`. `next` atualiza a UI com sucesso; `error` mostra a
    mensagem de validação vinda do DRF.
 
 ## Regras de negócio implementadas
 
-- Requisição não pode exceder a quantidade disponível em estoque
+- Requisição/ajuste negativo não pode exceder o saldo disponível em estoque
   (validado no serializer do backend, e também via `AsyncValidator` no
   formulário do Angular).
-- A cada requisição/devolução, a quantidade do produto é atualizada
-  automaticamente (view do backend, dentro de uma transação atômica).
+- A cada movimentação, `ServicoEstoque` atualiza o `SaldoEstoque` (e o custo
+  médio, quando a movimentação é uma entrada com `custo_unitario`) dentro de
+  uma transação com lock de linha — é o único código que escreve saldo.
 - CSV de produtos: categoria e fornecedor podem ser referenciados pelo nome;
-  se não existirem, são criados automaticamente na importação.
+  se não existirem, são criados automaticamente na importação. A quantidade
+  da planilha vira um ajuste de inventário (`ServicoEstoque.definir_saldo_inicial`),
+  não uma sobrescrita direta.
 - Import de NF-e: **não cria produto automaticamente** quando um item não
   casa com nenhum SKU/nome existente (ao contrário do CSV) — fica pendente
   até cadastro manual. O rastreamento é por item da nota (não pela nota
   inteira), então reimportar o mesmo arquivo depois de cadastrar o produto
   processa só o que faltava, sem duplicar o que já foi aplicado.
+- `Empresa`/`Deposito` existem no schema mas ainda não são multi-tenant de
+  verdade: toda a API opera sobre a única empresa/depósito semeados por
+  migration (`ServicoEstoque.get_empresa_padrao`/`get_deposito_padrao`).
 
 ## Próximos passos sugeridos (para continuar estudando)
 
 - Persistir os filtros de produtos na URL (query params), pra permitir compartilhar/recarregar a busca.
+- Multi-tenant de verdade: amarrar `Empresa` ao usuário autenticado (hoje toda a API usa a empresa "padrão" semeada por migration).
+- Múltiplos depósitos: expor `Deposito` na UI, `TRANSFERENCIA` entre depósitos e saldo por depósito no `SaldoEstoque`.
+- Controle de lote/validade (`Lote`) e motor de custeio FIFO (`CamadaCusto`), parametrizável por `ConfiguracaoEstoque` (regime tributário/método de valoração).

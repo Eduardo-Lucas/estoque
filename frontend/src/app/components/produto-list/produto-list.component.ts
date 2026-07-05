@@ -47,6 +47,10 @@ export class ProdutoListComponent implements OnInit, OnDestroy {
     return !!this.filtroNome || this.filtroCategoria !== null || this.filtroFornecedor !== null;
   }
 
+  estoqueBaixo(produto: Produto): boolean {
+    return Number(produto.saldo ?? 0) <= produto.estoque_minimo;
+  }
+
   ngOnInit(): void {
     this.carregar();
     this.carregarCategorias();

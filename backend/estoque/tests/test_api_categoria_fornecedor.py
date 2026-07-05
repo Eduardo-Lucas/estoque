@@ -77,7 +77,7 @@ class TestCategoriaApi:
         assert Categoria.objects.get(nome='Ferragens').descricao == 'Parafusos, porcas e afins'
 
     def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, categoria):
-        Categoria.objects.create(nome='Elétrica')
+        Categoria.objects.create(empresa=categoria.empresa, nome='Elétrica')
 
         resposta = api_client.get(reverse('categoria-list'), {'nome': 'ferrag'})
 
@@ -89,7 +89,7 @@ class TestCategoriaApi:
         assert resposta.data['count'] == 0
 
     def test_sem_filtro_retorna_todas(self, api_client, categoria):
-        Categoria.objects.create(nome='Elétrica')
+        Categoria.objects.create(empresa=categoria.empresa, nome='Elétrica')
         resposta = api_client.get(reverse('categoria-list'))
         assert resposta.data['count'] == 2
 
@@ -143,7 +143,7 @@ class TestFornecedorApi:
         assert Fornecedor.objects.get(nome='Distribuidora ABC Ltda').cnpj == '12.345.678/0001-99'
 
     def test_filtro_por_nome_e_parcial_e_case_insensitive(self, api_client, fornecedor):
-        Fornecedor.objects.create(nome='Distribuidora XYZ')
+        Fornecedor.objects.create(empresa=fornecedor.empresa, nome='Distribuidora XYZ')
 
         resposta = api_client.get(reverse('fornecedor-list'), {'nome': 'abc'})
 
@@ -155,7 +155,7 @@ class TestFornecedorApi:
         assert resposta.data['count'] == 0
 
     def test_sem_filtro_retorna_todos(self, api_client, fornecedor):
-        Fornecedor.objects.create(nome='Distribuidora XYZ')
+        Fornecedor.objects.create(empresa=fornecedor.empresa, nome='Distribuidora XYZ')
         resposta = api_client.get(reverse('fornecedor-list'))
         assert resposta.data['count'] == 2
 
