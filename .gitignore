@@ -5,6 +5,7 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/.coverage
 backend/htmlcov/
+backend/staticfiles/
 
 # Frontend
 frontend/node_modules/
