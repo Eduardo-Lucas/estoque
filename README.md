@@ -409,6 +409,56 @@ com o e-mail/senha de um `createsuperuser` já existente.
 > O CORS já está liberado no backend para `localhost:4200` (ver
 > `CORS_ALLOWED_ORIGINS` em `settings.py`).
 
+## Deploy (Render, camada gratuita)
+
+Tudo definido como código em `render.yaml` (na raiz do repo) — um Blueprint
+do Render com três recursos:
+
+- **`estoque-backend`** (Web Service, Python, plano free): builda com
+  `backend/build.sh` (`pip install` + `collectstatic` + `migrate`) e sobe com
+  `gunicorn estoque_backend.wsgi:application`.
+- **`estoque-frontend`** (Static Site, plano free, sem sleep): builda com
+  `frontend/build.sh`, que gera `environment.prod.ts` apontando pra URL do
+  backend (recebida via `fromService`, então não fica hardcoded) antes de
+  rodar `ng build`. Publica `dist/estoque-frontend/browser`, com uma regra de
+  rewrite (`/*` → `/index.html`) pra não quebrar as rotas do Angular Router
+  em recarregamentos/deep links.
+- **`estoque-db`** (Postgres, plano free): ligado ao backend via
+  `DATABASE_URL` (`fromDatabase`).
+
+`SECRET_KEY` é gerado automaticamente pelo Render (`generateValue: true`);
+`FRONTEND_URL`/`CORS_ALLOWED_ORIGINS` do backend e a URL de API do frontend
+são resolvidos entre os dois serviços via `fromService` — nenhuma URL fica
+fixa no código, exceto os nomes dos serviços no próprio `render.yaml`.
+
+### Como subir
+
+1. No dashboard do Render: **New > Blueprint**, conecte este repositório e
+   aponte pro `render.yaml` na raiz — ele cria os três recursos de uma vez.
+2. Depois do primeiro deploy, todo `git push` na `main` reimplanta os dois
+   serviços automaticamente (comportamento nativo do Render pra serviços
+   ligados a um Blueprint) — sem passo extra de CI/CD.
+3. Para criar a sua conta no ambiente publicado, use o `/registro` do próprio
+   frontend implantado (mesmo fluxo do dev local) — não precisa de
+   `createsuperuser` pra isso. Se quiser acesso ao `/admin`, rode
+   `python manage.py createsuperuser` manualmente pelo Shell do serviço no
+   Render.
+
+### Limitações da camada gratuita (aceitas conscientemente)
+
+- **Postgres free expira**: 30 dias após criado, mais 14 dias de carência —
+  depois disso o banco (e os dados) são apagados se não virar um plano pago.
+  Pra um projeto de estudo, o esperado é recriar o banco quando expirar.
+- **Web Service free dorme**: depois de ~15 min sem requisição, o backend
+  hiberna; a primeira requisição seguinte demora uns 30-60s pra "acordar" o
+  serviço. O Static Site do frontend não tem esse problema (fica sempre no
+  ar).
+- **E-mail continua no console**: `EMAIL_BACKEND` não muda em produção — o
+  link de confirmação de cadastro cai no log do serviço `estoque-backend`
+  (aba **Logs** no dashboard do Render), não numa caixa de entrada de
+  verdade. Configurar um SMTP real é um próximo passo, não parte desta
+  entrega.
+
 ## Testes
 
 ### Backend (pytest-django)
