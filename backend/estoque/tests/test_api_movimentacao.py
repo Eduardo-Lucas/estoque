@@ -76,28 +76,28 @@ class TestMovimentacaoApi:
         assert resposta.status_code == status.HTTP_400_BAD_REQUEST
         assert ServicoEstoque.saldo_disponivel(produto) == saldo_inicial
 
-    def test_listagem_traz_nome_do_produto(self, api_client, produto, deposito):
+    def test_listagem_traz_nome_do_produto(self, api_client, produto, deposito, usuario):
         Movimentacao.objects.create(
-            empresa=produto.empresa, produto=produto, deposito=deposito,
+            empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario,
             tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana',
         )
         resposta = api_client.get(reverse('movimentacao-list'))
         assert resposta.data['results'][0]['produto_nome'] == produto.nome
 
-    def test_filtro_por_produto_retorna_apenas_suas_movimentacoes(self, api_client, produto, categoria, fornecedor, deposito):
+    def test_filtro_por_produto_retorna_apenas_suas_movimentacoes(self, api_client, produto, categoria, fornecedor, deposito, usuario):
         outro_produto = Produto.objects.create(empresa=produto.empresa, nome='Outro produto', categoria=categoria, fornecedor=fornecedor)
-        Movimentacao.objects.create(empresa=produto.empresa, produto=produto, deposito=deposito, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
-        Movimentacao.objects.create(empresa=produto.empresa, produto=outro_produto, deposito=deposito, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
+        Movimentacao.objects.create(empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
+        Movimentacao.objects.create(empresa=produto.empresa, produto=outro_produto, deposito=deposito, usuario=usuario, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
 
         resposta = api_client.get(reverse('movimentacao-list'), {'produto': produto.id})
 
         assert resposta.data['count'] == 1
         assert resposta.data['results'][0]['produto'] == produto.id
 
-    def test_sem_filtro_retorna_movimentacoes_de_todos_os_produtos(self, api_client, produto, categoria, fornecedor, deposito):
+    def test_sem_filtro_retorna_movimentacoes_de_todos_os_produtos(self, api_client, produto, categoria, fornecedor, deposito, usuario):
         outro_produto = Produto.objects.create(empresa=produto.empresa, nome='Outro produto', categoria=categoria, fornecedor=fornecedor)
-        Movimentacao.objects.create(empresa=produto.empresa, produto=produto, deposito=deposito, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
-        Movimentacao.objects.create(empresa=produto.empresa, produto=outro_produto, deposito=deposito, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
+        Movimentacao.objects.create(empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana')
+        Movimentacao.objects.create(empresa=produto.empresa, produto=outro_produto, deposito=deposito, usuario=usuario, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Bia')
 
         resposta = api_client.get(reverse('movimentacao-list'))
 

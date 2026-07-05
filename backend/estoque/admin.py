@@ -32,8 +32,9 @@ class FornecedorAdmin(admin.ModelAdmin):
 
 @admin.register(Movimentacao)
 class MovimentacaoAdmin(admin.ModelAdmin):
-    list_display = ('produto', 'tipo', 'quantidade', 'deposito', 'solicitante', 'data')
-    list_filter = ('tipo', 'deposito')
+    list_display = ('produto', 'tipo', 'quantidade', 'deposito', 'solicitante', 'usuario', 'data')
+    list_filter = ('tipo', 'deposito', 'usuario')
+    search_fields = ('produto__nome', 'usuario__email')
 
 
 class ItemNotaFiscalCompraInline(admin.TabularInline):

@@ -212,9 +212,8 @@ class Movimentacao(models.Model):
     # Preenchido em saídas (quem solicitou); entradas de compra/ajuste não têm
     # solicitante — usam `usuario` para saber quem lançou a movimentação.
     solicitante = models.CharField(max_length=150, blank=True)
-    usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+', null=True, blank=True,
-    )
+    # Obrigatório: toda movimentação precisa do log de quem a lançou.
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+')
     observacao = models.TextField(blank=True)
     data = models.DateTimeField(auto_now_add=True)
 

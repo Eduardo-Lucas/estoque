@@ -74,28 +74,35 @@ class TestProduto:
 
 
 class TestMovimentacao:
-    def test_str_retorna_resumo(self, produto, deposito):
+    def test_str_retorna_resumo(self, produto, deposito, usuario):
         movimentacao = Movimentacao.objects.create(
-            empresa=produto.empresa, produto=produto, deposito=deposito,
+            empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario,
             tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
         )
         assert str(movimentacao) == f'Requisição - {produto.nome} (5)'
 
-    def test_remover_produto_remove_movimentacoes(self, produto, deposito):
+    def test_remover_produto_remove_movimentacoes(self, produto, deposito, usuario):
         Movimentacao.objects.create(
-            empresa=produto.empresa, produto=produto, deposito=deposito,
+            empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario,
             tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
         )
         produto.delete()
         assert Movimentacao.objects.count() == 0
 
-    def test_ordering_mais_recente_primeiro(self, produto, deposito):
+    def test_ordering_mais_recente_primeiro(self, produto, deposito, usuario):
         primeira = Movimentacao.objects.create(
-            empresa=produto.empresa, produto=produto, deposito=deposito,
+            empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario,
             tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana',
         )
         segunda = Movimentacao.objects.create(
-            empresa=produto.empresa, produto=produto, deposito=deposito,
+            empresa=produto.empresa, produto=produto, deposito=deposito, usuario=usuario,
             tipo=Movimentacao.DEVOLUCAO, quantidade=1, solicitante='Bia',
         )
         assert list(Movimentacao.objects.all()) == [segunda, primeira]
+
+    def test_usuario_e_obrigatorio(self, produto, deposito):
+        with pytest.raises(IntegrityError):
+            Movimentacao.objects.create(
+                empresa=produto.empresa, produto=produto, deposito=deposito,
+                tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana',
+            )
