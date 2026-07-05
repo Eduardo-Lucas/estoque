@@ -89,7 +89,7 @@ class MovimentacaoSerializer(serializers.ModelSerializer):
         tipo = attrs.get('tipo')
         quantidade = attrs.get('quantidade')
 
-        if tipo in TIPOS_SAIDA and produto and quantidade:
+        if tipo in TIPOS_SAIDA and produto and quantidade and not produto.resolve_permite_estoque_negativo():
             saldo = ServicoEstoque.saldo_disponivel(produto)
             if quantidade > saldo:
                 raise serializers.ValidationError(

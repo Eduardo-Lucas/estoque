@@ -2,8 +2,8 @@ from django.contrib import admin
 from django.db.models import Sum
 
 from .models import (
-    Categoria, Deposito, Empresa, Fornecedor, ItemNotaFiscalCompra, Movimentacao,
-    NotaFiscalCompra, Produto, SaldoEstoque,
+    CamadaCusto, Categoria, ConfiguracaoEstoque, Deposito, Empresa, Fornecedor,
+    ItemNotaFiscalCompra, Lote, Movimentacao, NotaFiscalCompra, Produto, SaldoEstoque,
 )
 
 
@@ -61,6 +61,24 @@ class DepositoAdmin(admin.ModelAdmin):
 
 @admin.register(SaldoEstoque)
 class SaldoEstoqueAdmin(admin.ModelAdmin):
-    list_display = ('produto', 'deposito', 'quantidade', 'custo_medio', 'atualizado_em')
+    list_display = ('produto', 'deposito', 'lote', 'quantidade', 'custo_medio', 'atualizado_em')
+    list_filter = ('deposito',)
+    search_fields = ('produto__nome',)
+
+
+@admin.register(ConfiguracaoEstoque)
+class ConfiguracaoEstoqueAdmin(admin.ModelAdmin):
+    list_display = ('empresa', 'regime_tributario', 'metodo_valoracao', 'permite_estoque_negativo', 'controla_lote_por_padrao')
+
+
+@admin.register(Lote)
+class LoteAdmin(admin.ModelAdmin):
+    list_display = ('produto', 'numero_lote', 'data_fabricacao', 'data_validade')
+    search_fields = ('produto__nome', 'numero_lote')
+
+
+@admin.register(CamadaCusto)
+class CamadaCustoAdmin(admin.ModelAdmin):
+    list_display = ('produto', 'deposito', 'lote', 'quantidade_disponivel', 'quantidade_original', 'custo_unitario', 'criado_em')
     list_filter = ('deposito',)
     search_fields = ('produto__nome',)
