@@ -34,22 +34,22 @@ describe('AuthService', () => {
   it('login guarda o token/usuário e atualiza os signals', () => {
     const resposta: TokenResponse = { token: 'abc123' };
 
-    service.login({ username: 'eduardo', password: 'senha' }).subscribe((r) => expect(r).toEqual(resposta));
+    service.login({ email: 'eduardo@example.com', password: 'senha' }).subscribe((r) => expect(r).toEqual(resposta));
 
     const req = httpMock.expectOne(API_URL);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ username: 'eduardo', password: 'senha' });
+    expect(req.request.body).toEqual({ email: 'eduardo@example.com', password: 'senha' });
     req.flush(resposta);
 
     expect(service.getToken()).toBe('abc123');
     expect(service.autenticado()).toBe(true);
-    expect(service.usuario()).toBe('eduardo');
+    expect(service.usuario()).toBe('eduardo@example.com');
     expect(localStorage.getItem('estoque_auth_token')).toBe('abc123');
-    expect(localStorage.getItem('estoque_auth_username')).toBe('eduardo');
+    expect(localStorage.getItem('estoque_auth_email')).toBe('eduardo@example.com');
   });
 
   it('logout limpa o token/usuário do storage e dos signals', () => {
-    service.login({ username: 'eduardo', password: 'senha' }).subscribe();
+    service.login({ email: 'eduardo@example.com', password: 'senha' }).subscribe();
     httpMock.expectOne(API_URL).flush({ token: 'abc123' });
 
     service.logout();
@@ -58,12 +58,12 @@ describe('AuthService', () => {
     expect(service.autenticado()).toBe(false);
     expect(service.usuario()).toBeNull();
     expect(localStorage.getItem('estoque_auth_token')).toBeNull();
-    expect(localStorage.getItem('estoque_auth_username')).toBeNull();
+    expect(localStorage.getItem('estoque_auth_email')).toBeNull();
   });
 
   it('recupera a sessão já salva no localStorage ao iniciar', () => {
     localStorage.setItem('estoque_auth_token', 'token-existente');
-    localStorage.setItem('estoque_auth_username', 'maria');
+    localStorage.setItem('estoque_auth_email', 'maria@example.com');
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -73,6 +73,6 @@ describe('AuthService', () => {
 
     expect(novoServico.getToken()).toBe('token-existente');
     expect(novoServico.autenticado()).toBe(true);
-    expect(novoServico.usuario()).toBe('maria');
+    expect(novoServico.usuario()).toBe('maria@example.com');
   });
 });

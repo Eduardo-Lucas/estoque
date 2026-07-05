@@ -16,6 +16,7 @@ comunica com o backend (Django + DRF) via HTTP/REST.
 estoque/
 ├── backend/            Django + DRF
 │   ├── estoque_backend/    settings, urls raiz
+│   ├── contas/              modelo de usuário customizado (login por e-mail)
 │   └── estoque/             app com models, serializers, views, urls, admin
 │       ├── services.py          ServicoEstoque — único ponto de escrita de saldo/ledger
 │       └── nfe.py               parsing puro do XML de NF-e (sem acesso a banco)
@@ -31,8 +32,11 @@ estoque/
 
 ## Funcionalidades
 
-- **Autenticação por token** (DRF Token Auth): guard de rotas e interceptor
-  HTTP que anexa o token e trata 401. A tela de login (`/login`) usa um
+- **Autenticação por token** (DRF Token Auth) **com login por e-mail**: o
+  modelo de usuário é customizado (`contas.Usuario`, `AUTH_USER_MODEL`),
+  sem campo `username` — o e-mail é o identificador único desde o cadastro
+  (`createsuperuser` já pede só e-mail/senha). Guard de rotas e interceptor
+  HTTP anexam o token e tratam 401. A tela de login (`/login`) usa um
   layout dividido — formulário à esquerda, ilustração temática de estoque
   à direita (escondida em telas estreitas).
 - **Produtos**: cadastro completo — nome, SKU, código de barras, categoria,
@@ -47,14 +51,20 @@ estoque/
   editando o cadastro e marcando o campo "ativo" novamente.
 - **Saldo de estoque derivado do ledger**: `Produto` não guarda mais uma
   quantidade mutável. Toda entrada/saída é uma `Movimentacao` (requisição,
-  devolução, compra, ajuste de inventário `+`/`-`), e o saldo/custo médio
-  ficam cacheados em `SaldoEstoque`, sempre recalculados por
-  `ServicoEstoque.registrar_movimentacao` (backend/estoque/services.py) numa
-  única transação com lock de linha — corrige uma condição de corrida que
-  existia na versão anterior (`Produto.quantidade +=/-=` sem lock). Compras
-  e ajustes positivos com `custo_unitario` informado atualizam o custo médio
-  móvel do produto. Requisições/ajustes negativos que deixariam o saldo
-  negativo são bloqueados.
+  devolução, compra, ajuste de inventário `+`/`-`), e o saldo/custo ficam
+  cacheados em `SaldoEstoque`, sempre recalculados por
+  `ServicoEstoque.registrar_entrada`/`registrar_saida` (backend/estoque/services.py)
+  numa única transação com lock de linha — corrige uma condição de corrida
+  que existia na versão anterior (`Produto.quantidade +=/-=` sem lock).
+  Requisições/ajustes negativos que deixariam o saldo negativo são bloqueados
+  (a menos que o produto ou a empresa liberem estoque negativo).
+- **Motor de custeio parametrizável por empresa** (`ConfiguracaoEstoque.metodo_valoracao`):
+  o cálculo de custo de cada movimentação é delegado a uma estratégia —
+  **média móvel** (padrão), **FIFO** (com camadas de custo em `CamadaCusto`,
+  consumidas na ordem de entrada) ou **custo padrão** (sempre valoriza o
+  saldo por `Produto.preco_custo_referencia`, preservando o preço de compra
+  real no movimento de entrada). Produtos podem exigir controle de lote
+  (`Produto.controla_lote`/`ConfiguracaoEstoque.controla_lote_por_padrao`).
 - **`Empresa`/`Deposito`**: modelos novos, mas ainda são só *scaffolding*
   interno — uma única empresa e um único depósito "padrão" são semeados por
   migration, sem tela, login por empresa ou qualquer filtro visível na API/
@@ -110,7 +120,7 @@ python -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py createsuperuser   # necessário para logar no frontend e acessar /admin
+python manage.py createsuperuser   # pede só e-mail/senha; necessário pra logar no frontend e acessar /admin
 python manage.py runserver
 ```
 
@@ -128,7 +138,7 @@ obrigatória, exceto `POST /api/auth/token/`):
   (`GET` aceita `?nome=` para filtrar; `DELETE` inativa em vez de remover)
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
 - `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto
-- `POST /api/auth/token/` — login, retorna o token do usuário
+- `POST /api/auth/token/` — login por e-mail (`{"email": ..., "password": ...}`), retorna o token do usuário
 
 ### Frontend
 
@@ -138,8 +148,8 @@ npm install
 npm start
 ```
 
-Acesse `http://localhost:4200` e faça login com o usuário criado via
-`createsuperuser` (ou outro usuário Django existente).
+Acesse `http://localhost:4200` e faça login com o e-mail/senha criados via
+`createsuperuser` (ou outro `contas.Usuario` existente).
 
 > O CORS já está liberado no backend para `localhost:4200` (ver
 > `CORS_ALLOWED_ORIGINS` em `settings.py`).
@@ -224,9 +234,10 @@ Exemplo: registrar uma requisição de produto.
    corpo em JSON.
 5. No backend, `MovimentacaoViewSet.create()` valida os dados
    (`MovimentacaoSerializer.validate`, que barra requisição maior que o
-   saldo disponível) e delega para `ServicoEstoque.registrar_movimentacao`,
-   que grava a `Movimentacao` e atualiza o `SaldoEstoque` numa única
-   transação com lock de linha.
+   saldo disponível) e delega para `ServicoEstoque.registrar_entrada` ou
+   `registrar_saida` (conforme o tipo), que grava a `Movimentacao` e
+   atualiza o `SaldoEstoque` numa única transação com lock de linha,
+   usando a estratégia de custeio da empresa.
 6. A resposta (201 Created ou 400 com erro) volta pro Angular via
    `Observable`. `next` atualiza a UI com sucesso; `error` mostra a
    mensagem de validação vinda do DRF.
@@ -251,10 +262,13 @@ Exemplo: registrar uma requisição de produto.
 - `Empresa`/`Deposito` existem no schema mas ainda não são multi-tenant de
   verdade: toda a API opera sobre a única empresa/depósito semeados por
   migration (`ServicoEstoque.get_empresa_padrao`/`get_deposito_padrao`).
+- Login é por e-mail, não por username — o campo `username` não existe no
+  modelo de usuário (`contas.Usuario`); `/api/auth/token/` só aceita
+  `{"email": ..., "password": ...}`.
 
 ## Próximos passos sugeridos (para continuar estudando)
 
 - Persistir os filtros de produtos na URL (query params), pra permitir compartilhar/recarregar a busca.
-- Multi-tenant de verdade: amarrar `Empresa` ao usuário autenticado (hoje toda a API usa a empresa "padrão" semeada por migration).
+- Multi-tenant de verdade: amarrar `Empresa` ao `contas.Usuario` autenticado (hoje toda a API usa a empresa "padrão" semeada por migration).
 - Múltiplos depósitos: expor `Deposito` na UI, `TRANSFERENCIA` entre depósitos e saldo por depósito no `SaldoEstoque`.
 - Controle de lote/validade (`Lote`) e motor de custeio FIFO (`CamadaCusto`), parametrizável por `ConfiguracaoEstoque` (regime tributário/método de valoração).

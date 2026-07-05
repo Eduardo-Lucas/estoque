@@ -8,8 +8,8 @@
 
     <form [formGroup]="form" (ngSubmit)="entrar()" class="login-form">
       <div>
-        <label>Usuário</label>
-        <input formControlName="username" name="username" placeholder="Usuário" autocomplete="username">
+        <label>E-mail</label>
+        <input type="email" formControlName="email" name="email" placeholder="E-mail" autocomplete="email">
       </div>
 
       <div>

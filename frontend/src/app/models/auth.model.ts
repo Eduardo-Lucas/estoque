@@ -1,5 +1,5 @@
 export interface Credenciais {
-  username: string;
+  email: string;
   password: string;
 }
 
