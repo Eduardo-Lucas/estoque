@@ -216,6 +216,51 @@ Diagrama reflete o schema atual em `backend/estoque/models.py` e
 `backend/contas/models.py` (`NOTA_FISCAL_COMPRA`/`ITEM_NOTA_FISCAL` no
 diagrama são `NotaFiscalCompra`/`ItemNotaFiscalCompra` no código).
 
+### O que cada entidade representa
+
+- **`Empresa`**: o tenant raiz. Toda entidade de negócio (produto, categoria,
+  fornecedor, depósito, movimentação, saldo, nota fiscal) pertence a uma
+  `Empresa`, e a API isola os dados por ela — é o que dá o "multi" do
+  multi-tenant.
+- **`Usuario`** (`contas.Usuario`): a conta de login, por e-mail (sem
+  `username`). Toda movimentação registra qual `Usuario` a lançou. `empresa`
+  é `NULL` só para contas administrativas (`createsuperuser`, uso exclusivo
+  do `/admin`) — qualquer outra conta sem empresa recebe 403 na API de
+  negócio.
+- **`ConfiguracaoEstoque`**: parametrização de uma `Empresa` — qual método de
+  custeio usar (média móvel/FIFO/custo padrão), regime tributário, e os
+  padrões herdados por produtos que não definem override (`controla_lote`,
+  `permite_estoque_negativo`). Toda empresa tem exatamente uma.
+- **`Categoria`** e **`Fornecedor`**: cadastros de referência para
+  `Produto`, únicos por nome dentro de cada empresa. Podem ser inativados
+  (nunca excluídos) e continuam existindo mesmo sem produtos vinculados.
+- **`Deposito`**: o local físico/lógico onde o estoque é guardado. Hoje toda
+  empresa tem exatamente um depósito "PADRAO" (criado junto no cadastro);
+  múltiplos depósitos e transferência entre eles são um próximo passo.
+- **`Produto`**: o item cadastrado (nome, SKU, unidade de medida, preço de
+  venda, etc.). Não guarda mais uma quantidade própria — o saldo é sempre
+  derivado do ledger de `Movimentacao` (ver `SaldoEstoque`). Pode exigir
+  controle de lote e pode ou não permitir saldo negativo, herdando o padrão
+  da empresa quando não definido explicitamente.
+- **`Lote`**: subdivisão opcional de um `Produto` por número de
+  lote/validade, só relevante quando o produto exige controle de lote.
+- **`Movimentacao`**: o ledger — todo evento de entrada ou saída de estoque
+  (requisição, devolução, compra, ajuste de inventário `+`/`-`) é um
+  registro aqui, com quantidade, custo, depósito, lote (se aplicável) e o
+  `Usuario` que lançou. É a fonte de verdade histórica; nunca é editada
+  depois de criada.
+- **`SaldoEstoque`**: o saldo e custo médio *atuais* de um produto num
+  depósito/lote, cacheado e recalculado a cada `Movimentacao` por
+  `ServicoEstoque` dentro de uma transação com lock — existe para consulta
+  rápida, sem precisar somar o ledger inteiro toda vez.
+- **`CamadaCusto`**: só usada pela estratégia de custeio FIFO — cada entrada
+  de estoque vira uma camada com sua própria quantidade/custo, consumida em
+  ordem na hora da saída. Média móvel e custo padrão não usam essa tabela.
+- **`NotaFiscalCompra`** e **`ItemNotaFiscalCompra`**: registro da
+  importação de uma NF-e de compra e de cada item dela — guardam o
+  casamento (ou pendência) entre item da nota e `Produto`/`Movimentacao`,
+  permitindo reimportar o mesmo arquivo sem duplicar estoque.
+
 ## Funcionalidades
 
 - **Autenticação por token** (DRF Token Auth) **com login por e-mail**: o
