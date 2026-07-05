@@ -453,11 +453,29 @@ fixa no código, exceto os nomes dos serviços no próprio `render.yaml`.
   hiberna; a primeira requisição seguinte demora uns 30-60s pra "acordar" o
   serviço. O Static Site do frontend não tem esse problema (fica sempre no
   ar).
-- **E-mail continua no console**: `EMAIL_BACKEND` não muda em produção — o
-  link de confirmação de cadastro cai no log do serviço `estoque-backend`
-  (aba **Logs** no dashboard do Render), não numa caixa de entrada de
-  verdade. Configurar um SMTP real é um próximo passo, não parte desta
-  entrega.
+### E-mail (SMTP do Gmail)
+
+Em produção, `render.yaml` já configura `EMAIL_BACKEND` para
+`smtp.EmailBackend` apontando pro `smtp.gmail.com:587` (TLS). Faltam só as
+credenciais, que ficam de fora do repo (`sync: false` no Blueprint — o Render
+pede o valor manualmente):
+
+1. Ative a verificação em duas etapas na conta Gmail que vai enviar os
+   e-mails (obrigatório pro passo seguinte).
+2. Gere uma **App Password** em
+   https://myaccount.google.com/apppasswords (não é a senha normal da conta).
+3. No dashboard do Render, no serviço `estoque-backend` → **Environment**,
+   preencha:
+   - `EMAIL_HOST_USER`: o endereço Gmail completo (ex.: `voce@gmail.com`).
+   - `EMAIL_HOST_PASSWORD`: a App Password gerada no passo 2 (sem espaços).
+   - `DEFAULT_FROM_EMAIL`: o mesmo endereço Gmail — o Gmail rejeita/ignora um
+     "From" diferente da conta autenticada.
+4. Redeploy do `estoque-backend` (o Render costuma pedir isso sozinho após
+   salvar env vars novas).
+
+Em dev local, o `EMAIL_BACKEND` continua o `console.EmailBackend` (link de
+confirmação cai no terminal do `runserver`) — não precisa de credenciais
+reais pra desenvolver.
 
 ## Testes
 

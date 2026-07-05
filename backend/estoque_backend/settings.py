@@ -138,11 +138,17 @@ def _url_publica_render(valor: str) -> str:
 _cors_env = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200')
 CORS_ALLOWED_ORIGINS = [_url_publica_render(origem.strip()) for origem in _cors_env.split(',') if origem.strip()]
 
-# E-mail de confirmação de cadastro: em dev (e por padrão em produção, já que
-# é tudo camada gratuita) cai no console — em produção isso vai pro log do
-# serviço no Render. Sobrescreva via env var se configurar um SMTP de verdade.
+# E-mail de confirmação de cadastro: por padrão cai no console (dev, e
+# produção enquanto o SMTP não estiver configurado). Em produção, o
+# render.yaml troca EMAIL_BACKEND pra smtp.EmailBackend e informa host/porta/
+# credenciais de um SMTP real (Gmail) via env vars.
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@estoque.local')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 # Base da URL do frontend, usada para montar o link de confirmação de e-mail.
 FRONTEND_URL = _url_publica_render(os.environ.get('FRONTEND_URL', 'http://localhost:4200'))
