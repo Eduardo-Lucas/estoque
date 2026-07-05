@@ -2,10 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../environments/environment';
-import { TokenResponse } from '../models/auth.model';
+import { DadosRegistro, TokenResponse } from '../models/auth.model';
 import { AuthService } from './auth.service';
 
 const API_URL = `${environment.apiUrl}/auth/token/`;
+const API_REGISTRO_URL = `${environment.apiUrl}/auth/registro/`;
+const API_CONFIRMAR_EMAIL_URL = `${environment.apiUrl}/auth/confirmar-email/`;
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -74,5 +76,38 @@ describe('AuthService', () => {
     expect(novoServico.getToken()).toBe('token-existente');
     expect(novoServico.autenticado()).toBe(true);
     expect(novoServico.usuario()).toBe('maria@example.com');
+  });
+
+  it('registrar envia os dados de conta+empresa e não guarda sessão', () => {
+    const dados: DadosRegistro = {
+      nome: 'Fulana',
+      email: 'fulana@empresa.com',
+      password: 'senha-forte-123',
+      empresa_razao_social: 'Empresa Nova',
+      empresa_cnpj: '11222333000144',
+    };
+
+    service.registrar(dados).subscribe((r) => expect(r).toEqual({ detail: 'Cadastro realizado.' }));
+
+    const req = httpMock.expectOne(API_REGISTRO_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(dados);
+    req.flush({ detail: 'Cadastro realizado.' });
+
+    expect(service.autenticado()).toBe(false);
+    expect(service.getToken()).toBeNull();
+  });
+
+  it('confirmarEmail envia uid/token e guarda a sessão com o e-mail devolvido', () => {
+    service.confirmarEmail('uid-123', 'token-abc').subscribe();
+
+    const req = httpMock.expectOne(API_CONFIRMAR_EMAIL_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ uid: 'uid-123', token: 'token-abc' });
+    req.flush({ token: 'token-sessao', email: 'nova@empresa.com' });
+
+    expect(service.getToken()).toBe('token-sessao');
+    expect(service.autenticado()).toBe(true);
+    expect(service.usuario()).toBe('nova@empresa.com');
   });
 });

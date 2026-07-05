@@ -8,8 +8,15 @@ from estoque.services import ServicoEstoque
 
 
 @pytest.fixture
-def usuario(db):
-    return Usuario.objects.create_user(email='eduardo@example.com', password='senha-forte-123')
+def empresa(db):
+    """A empresa 'padrão' já vem semeada por migration — os testes reaproveitam
+    essa mesma linha, já que hoje o sistema todo assume uma empresa só."""
+    return ServicoEstoque.get_empresa_padrao()
+
+
+@pytest.fixture
+def usuario(empresa):
+    return Usuario.objects.create_user(email='eduardo@example.com', password='senha-forte-123', empresa=empresa)
 
 
 @pytest.fixture
@@ -18,13 +25,6 @@ def api_client(usuario):
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
     return client
-
-
-@pytest.fixture
-def empresa(db):
-    """A empresa 'padrão' já vem semeada por migration — os testes reaproveitam
-    essa mesma linha, já que hoje o sistema todo assume uma empresa só."""
-    return ServicoEstoque.get_empresa_padrao()
 
 
 @pytest.fixture
