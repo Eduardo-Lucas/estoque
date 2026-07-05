@@ -2,6 +2,7 @@ import pytest
 from django.db import IntegrityError
 
 from estoque.models import Categoria, Fornecedor, Movimentacao, Produto
+from estoque.services import ServicoEstoque
 
 
 pytestmark = pytest.mark.django_db
@@ -11,13 +12,13 @@ class TestCategoria:
     def test_str_retorna_nome(self, categoria):
         assert str(categoria) == 'Ferragens'
 
-    def test_nome_e_unico(self, categoria):
+    def test_nome_e_unico_por_empresa(self, categoria):
         with pytest.raises(IntegrityError):
-            Categoria.objects.create(nome='Ferragens')
+            Categoria.objects.create(empresa=categoria.empresa, nome='Ferragens')
 
-    def test_ordering_por_nome(self):
-        Categoria.objects.create(nome='Zebra')
-        Categoria.objects.create(nome='Alpha')
+    def test_ordering_por_nome(self, empresa):
+        Categoria.objects.create(empresa=empresa, nome='Zebra')
+        Categoria.objects.create(empresa=empresa, nome='Alpha')
         nomes = list(Categoria.objects.values_list('nome', flat=True))
         assert nomes == sorted(nomes)
 
@@ -26,12 +27,12 @@ class TestFornecedor:
     def test_str_retorna_nome(self, fornecedor):
         assert str(fornecedor) == 'Distribuidora ABC'
 
-    def test_nome_e_unico(self, fornecedor):
+    def test_nome_e_unico_por_empresa(self, fornecedor):
         with pytest.raises(IntegrityError):
-            Fornecedor.objects.create(nome='Distribuidora ABC')
+            Fornecedor.objects.create(empresa=fornecedor.empresa, nome='Distribuidora ABC')
 
-    def test_campos_de_contato_sao_opcionais(self):
-        fornecedor = Fornecedor.objects.create(nome='Fornecedor Simples')
+    def test_campos_de_contato_sao_opcionais(self, empresa):
+        fornecedor = Fornecedor.objects.create(empresa=empresa, nome='Fornecedor Simples')
         assert fornecedor.cnpj == ''
         assert fornecedor.telefone == ''
         assert fornecedor.email == ''
@@ -42,27 +43,23 @@ class TestProduto:
     def test_str_retorna_nome(self, produto):
         assert str(produto) == 'Parafuso 10mm'
 
-    def test_defaults(self):
-        produto = Produto.objects.create(nome='Produto Simples')
+    def test_defaults(self, empresa):
+        produto = Produto.objects.create(empresa=empresa, nome='Produto Simples')
         assert produto.sku is None
         assert produto.unidade_medida == Produto.UNIDADE_UNIDADE
-        assert produto.quantidade == 0
+        assert ServicoEstoque.saldo_disponivel(produto) == 0
         assert produto.estoque_minimo == 0
-        assert produto.preco_custo == 0
+        assert produto.preco_custo_referencia == 0
         assert produto.preco == 0
         assert produto.ativo is True
 
-    def test_nome_e_unico(self, produto):
+    def test_sku_e_unico_por_empresa_quando_preenchido(self, produto):
         with pytest.raises(IntegrityError):
-            Produto.objects.create(nome='Parafuso 10mm')
+            Produto.objects.create(empresa=produto.empresa, nome='Outro produto', sku='PRF-001')
 
-    def test_sku_e_unico_quando_preenchido(self, produto):
-        with pytest.raises(IntegrityError):
-            Produto.objects.create(nome='Outro produto', sku='PRF-001')
-
-    def test_multiplos_produtos_podem_ter_sku_nulo(self):
-        Produto.objects.create(nome='Produto A', sku=None)
-        Produto.objects.create(nome='Produto B', sku=None)
+    def test_multiplos_produtos_podem_ter_sku_nulo(self, empresa):
+        Produto.objects.create(empresa=empresa, nome='Produto A', sku=None)
+        Produto.objects.create(empresa=empresa, nome='Produto B', sku=None)
         assert Produto.objects.filter(sku__isnull=True).count() == 2
 
     def test_remover_categoria_nao_apaga_produto(self, produto, categoria):
@@ -77,24 +74,28 @@ class TestProduto:
 
 
 class TestMovimentacao:
-    def test_str_retorna_resumo(self, produto):
+    def test_str_retorna_resumo(self, produto, deposito):
         movimentacao = Movimentacao.objects.create(
-            produto=produto, tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
+            empresa=produto.empresa, produto=produto, deposito=deposito,
+            tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
         )
         assert str(movimentacao) == f'Requisição - {produto.nome} (5)'
 
-    def test_remover_produto_remove_movimentacoes(self, produto):
+    def test_remover_produto_remove_movimentacoes(self, produto, deposito):
         Movimentacao.objects.create(
-            produto=produto, tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
+            empresa=produto.empresa, produto=produto, deposito=deposito,
+            tipo=Movimentacao.REQUISICAO, quantidade=5, solicitante='Ana',
         )
         produto.delete()
         assert Movimentacao.objects.count() == 0
 
-    def test_ordering_mais_recente_primeiro(self, produto):
+    def test_ordering_mais_recente_primeiro(self, produto, deposito):
         primeira = Movimentacao.objects.create(
-            produto=produto, tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana',
+            empresa=produto.empresa, produto=produto, deposito=deposito,
+            tipo=Movimentacao.REQUISICAO, quantidade=1, solicitante='Ana',
         )
         segunda = Movimentacao.objects.create(
-            produto=produto, tipo=Movimentacao.DEVOLUCAO, quantidade=1, solicitante='Bia',
+            empresa=produto.empresa, produto=produto, deposito=deposito,
+            tipo=Movimentacao.DEVOLUCAO, quantidade=1, solicitante='Bia',
         )
         assert list(Movimentacao.objects.all()) == [segunda, primeira]

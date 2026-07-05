@@ -26,7 +26,7 @@
     </div>
     <div>
       <dt>Quantidade em estoque</dt>
-      <dd [class.estoque-baixo]="p.quantidade <= p.estoque_minimo">{{ p.quantidade }}</dd>
+      <dd [class.estoque-baixo]="estoqueBaixo(p)">{{ p.saldo }}</dd>
     </div>
     <div>
       <dt>Estoque mínimo</dt>

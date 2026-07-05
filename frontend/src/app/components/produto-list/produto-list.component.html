@@ -56,7 +56,7 @@
         <td>{{ produto.nome }}</td>
         <td>{{ produto.sku || '-' }}</td>
         <td>{{ produto.categoria_nome || '-' }}</td>
-        <td [class.estoque-baixo]="produto.quantidade <= produto.estoque_minimo">{{ produto.quantidade }}</td>
+        <td [class.estoque-baixo]="estoqueBaixo(produto)">{{ produto.saldo }}</td>
         <td>R$ {{ produto.preco }}</td>
         <td>
           <span class="badge" [class.badge-inativo]="!produto.ativo">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</span>

@@ -18,9 +18,9 @@ describe('ProdutoHistoricoComponent', () => {
     id: 3,
     nome: 'Parafuso 10mm',
     unidade_medida: 'UN',
-    quantidade: 10,
+    saldo: 10,
     estoque_minimo: 5,
-    preco_custo: '1.00',
+    preco_custo_referencia: '1.00',
     preco: '2.50',
     ativo: true,
   };

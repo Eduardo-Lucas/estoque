@@ -6,6 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from estoque.models import Fornecedor, ItemNotaFiscalCompra, Movimentacao, NotaFiscalCompra, Produto
+from estoque.services import ServicoEstoque
 
 pytestmark = pytest.mark.django_db
 
@@ -33,8 +34,8 @@ class TestImportarNfeFeliz:
         assert resposta.data['numero_nfe'] == '1234'
 
         produto.refresh_from_db()
-        assert produto.quantidade == 150  # 100 + 50 (qCom do item 1)
-        assert str(produto.preco_custo) == '1.50'  # vUnCom do item 1, arredondado
+        assert ServicoEstoque.saldo_disponivel(produto) == 150  # 100 + 50 (qCom do item 1)
+        assert str(produto.preco_custo_referencia) == '1.50'  # vUnCom do item 1, arredondado
 
     def test_cria_movimentacao_do_tipo_compra(self, api_client, produto):
         _importar(api_client)
@@ -62,7 +63,7 @@ class TestImportarNfeFeliz:
 
     def test_fornecedor_e_casado_por_cnpj_com_formatacao_diferente(self, api_client, produto):
         total_fornecedores_antes = Fornecedor.objects.count()
-        fornecedor = Fornecedor.objects.create(nome='Nome Diferente Ltda', cnpj='12.345.678/0001-99')
+        fornecedor = Fornecedor.objects.create(empresa=produto.empresa, nome='Nome Diferente Ltda', cnpj='12.345.678/0001-99')
         _importar(api_client)
 
         # não cria fornecedor novo: casou pelo CNPJ (normalizado) com o que já existia
@@ -78,35 +79,34 @@ class TestReimportacaoIdempotente:
 
         assert resposta2.data['itens_processados'] == 0
         assert resposta2.data['itens_ja_processados'] == 1
-        produto.refresh_from_db()
-        assert produto.quantidade == 150  # não dobrou
+        assert ServicoEstoque.saldo_disponivel(produto) == 150  # não dobrou
         assert Movimentacao.objects.filter(produto=produto).count() == 1
         assert NotaFiscalCompra.objects.count() == 1
 
     def test_cadastrar_produto_pendente_e_reimportar_processa_so_o_pendente(self, api_client, produto):
         _importar(api_client)
 
-        produto_novo = Produto.objects.create(nome='Produto Desconhecido', sku='NOVO-XYZ', quantidade=0)
+        produto_novo = Produto.objects.create(empresa=produto.empresa, nome='Produto Desconhecido', sku='NOVO-XYZ')
         resposta2 = _importar(api_client)
 
         assert resposta2.data['itens_processados'] == 1
         assert resposta2.data['itens_ja_processados'] == 1
         assert resposta2.data['nao_encontrados'] == []
-        produto_novo.refresh_from_db()
-        assert produto_novo.quantidade == 3  # qCom do item 2
+        assert ServicoEstoque.saldo_disponivel(produto_novo) == 3  # qCom do item 2
 
 
 class TestErrosDeImportacao:
-    def test_quantidade_fracionaria_nao_toca_estoque(self, api_client, produto):
+    def test_quantidade_fracionaria_e_aceita(self, api_client, produto):
+        """Movimentacao.quantidade é Decimal — a guarda que só existia por
+        causa do antigo PositiveIntegerField foi removida (ver plano da PR)."""
         resposta = _importar(api_client, 'nfe_quantidade_fracionaria.xml')
 
         assert resposta.status_code == status.HTTP_200_OK
-        assert resposta.data['itens_processados'] == 0
-        assert len(resposta.data['erros']) == 1
-        assert 'fracionária' in resposta.data['erros'][0]['mensagem']
+        assert resposta.data['itens_processados'] == 1
+        assert resposta.data['erros'] == []
 
         produto.refresh_from_db()
-        assert produto.quantidade == 100
+        assert ServicoEstoque.saldo_disponivel(produto) == pytest.approx(102.5)
 
     def test_arquivo_ausente_retorna_400(self, api_client):
         resposta = api_client.post(reverse('produto-importar-nfe'), {}, format='multipart')

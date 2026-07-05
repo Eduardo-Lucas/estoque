@@ -52,9 +52,8 @@ export class ProdutoFormComponent implements OnInit {
     categoria: [null as number | null],
     fornecedor: [null as number | null],
     unidade_medida: ['UN' as UnidadeMedida, Validators.required],
-    quantidade: [0, [Validators.required, Validators.min(0)]],
     estoque_minimo: [0, [Validators.required, Validators.min(0)]],
-    preco_custo: [0, [Validators.required, Validators.min(0)]],
+    preco_custo_referencia: [0, [Validators.required, Validators.min(0)]],
     preco: [0, [Validators.required, Validators.min(0)]],
     ativo: [true],
   });
@@ -94,9 +93,8 @@ export class ProdutoFormComponent implements OnInit {
           categoria: produto.categoria ?? null,
           fornecedor: produto.fornecedor ?? null,
           unidade_medida: produto.unidade_medida,
-          quantidade: produto.quantidade,
           estoque_minimo: produto.estoque_minimo,
-          preco_custo: Number(produto.preco_custo),
+          preco_custo_referencia: Number(produto.preco_custo_referencia),
           preco: Number(produto.preco),
           ativo: produto.ativo,
         });

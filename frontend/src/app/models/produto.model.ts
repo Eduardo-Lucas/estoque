@@ -11,9 +11,12 @@ export interface Produto {
   fornecedor?: number | null;
   fornecedor_nome?: string | null;
   unidade_medida: UnidadeMedida;
-  quantidade: number;
+  /** Somente leitura — derivado do ledger de movimentações (ver Movimentacao). */
+  saldo?: number | string;
+  /** Somente leitura — custo médio móvel mantido pelo backend. */
+  custo_medio?: number | string;
   estoque_minimo: number;
-  preco_custo: number | string;
+  preco_custo_referencia: number | string;
   preco: number | string;
   ativo: boolean;
   criado_em?: string;

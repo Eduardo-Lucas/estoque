@@ -3,16 +3,17 @@ import io
 import re
 from decimal import Decimal
 
-from django.db import transaction
 from django.http import HttpResponse
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from . import nfe
 from .models import Produto, Categoria, Fornecedor, Movimentacao, NotaFiscalCompra, ItemNotaFiscalCompra
 from .serializers import ProdutoSerializer, CategoriaSerializer, FornecedorSerializer, MovimentacaoSerializer
+from .services import ServicoEstoque, SaldoInsuficienteError
 
 
 def _formatar_erros(erros_por_campo):
@@ -21,17 +22,6 @@ def _formatar_erros(erros_por_campo):
         primeira = mensagens[0] if isinstance(mensagens, list) else mensagens
         partes.append(f'{campo}: {primeira}')
     return '; '.join(partes)
-
-
-def _ajustar_estoque(movimentacao):
-    """Aplica o efeito da movimentação na quantidade do produto (requisição
-    retira do estoque; qualquer outro tipo — devolução ou compra — devolve)."""
-    produto = movimentacao.produto
-    if movimentacao.tipo == Movimentacao.REQUISICAO:
-        produto.quantidade -= movimentacao.quantidade
-    else:
-        produto.quantidade += movimentacao.quantidade
-    produto.save(update_fields=['quantidade', 'atualizado_em'])
 
 
 def _ler_csv(arquivo):
@@ -44,19 +34,19 @@ def _ler_csv(arquivo):
     return csv.DictReader(io.StringIO(conteudo), delimiter=delimitador)
 
 
-def _valor_categoria(nome):
+def _valor_categoria(nome, empresa):
     nome = (nome or '').strip()
     if not nome:
         return None
-    categoria, _ = Categoria.objects.get_or_create(nome=nome)
+    categoria, _ = Categoria.objects.get_or_create(empresa=empresa, nome=nome)
     return categoria.id
 
 
-def _valor_fornecedor(nome):
+def _valor_fornecedor(nome, empresa):
     nome = (nome or '').strip()
     if not nome:
         return None
-    fornecedor, _ = Fornecedor.objects.get_or_create(nome=nome)
+    fornecedor, _ = Fornecedor.objects.get_or_create(empresa=empresa, nome=nome)
     return fornecedor.id
 
 
@@ -79,7 +69,7 @@ _CAMPOS_OPCIONAIS_PRODUTO = [
 ]
 
 
-def _dados_opcionais_produto(linha, colunas_presentes, incluir_vazios):
+def _dados_opcionais_produto(linha, colunas_presentes, incluir_vazios, empresa):
     """
     Monta os campos opcionais presentes no cabeçalho do CSV.
     Quando incluir_vazios=False (atualização de produto existente), células vazias
@@ -94,11 +84,13 @@ def _dados_opcionais_produto(linha, colunas_presentes, incluir_vazios):
             continue
 
         if campo == 'categoria':
-            dados['categoria'] = _valor_categoria(bruto)
+            dados['categoria'] = _valor_categoria(bruto, empresa)
         elif campo == 'fornecedor':
-            dados['fornecedor'] = _valor_fornecedor(bruto)
-        elif campo in ('preco', 'preco_custo'):
-            dados[campo] = _valor_preco(bruto)
+            dados['fornecedor'] = _valor_fornecedor(bruto, empresa)
+        elif campo == 'preco':
+            dados['preco'] = _valor_preco(bruto)
+        elif campo == 'preco_custo':
+            dados['preco_custo_referencia'] = _valor_preco(bruto)
         elif campo == 'ativo':
             dados['ativo'] = _valor_booleano(linha.get('ativo'))
         elif campo == 'unidade_medida':
@@ -138,6 +130,7 @@ def _importar_csv_simples(request, model, serializer_class, coluna_chave, coluna
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    empresa = ServicoEstoque.get_empresa_padrao()
     criados = 0
     atualizados = 0
     erros = []
@@ -152,7 +145,7 @@ def _importar_csv_simples(request, model, serializer_class, coluna_chave, coluna
             if campo in colunas_presentes:
                 dados[campo] = (linha.get(campo) or '').strip()
 
-        instancia = model.objects.filter(**{coluna_chave: chave}).first()
+        instancia = model.objects.filter(empresa=empresa, **{coluna_chave: chave}).first()
         serializer = serializer_class(instancia, data=dados, partial=bool(instancia))
         if serializer.is_valid():
             serializer.save()
@@ -192,27 +185,28 @@ class InativarAoRemoverMixin:
         instance.save(update_fields=['ativo'])
 
 
-def _buscar_produto_por_item_nfe(item_nfe):
+def _buscar_produto_por_item_nfe(item_nfe, empresa):
     """Casa um item da NF-e com um Produto existente por SKU (código do
     fornecedor) ou, na falta desse match, por nome. Nunca cria produto novo."""
     codigo = (item_nfe.codigo_produto_fornecedor or '').strip()
     if codigo:
-        produto = Produto.objects.filter(sku=codigo).first()
+        produto = Produto.objects.filter(empresa=empresa, sku=codigo).first()
         if produto:
             return produto
-    return Produto.objects.filter(nome__iexact=item_nfe.descricao.strip()).first()
+    return Produto.objects.filter(empresa=empresa, nome__iexact=item_nfe.descricao.strip()).first()
 
 
-def _obter_ou_criar_fornecedor_por_nfe(emitente):
+def _obter_ou_criar_fornecedor_por_nfe(emitente, empresa):
     """Casa o emitente da NF-e com um Fornecedor existente por CNPJ (normalizado,
     já que o campo não tem formatação obrigatória) ou por nome; cria se não achar."""
     cnpj_nota = re.sub(r'\D', '', emitente.cnpj or '')
     if cnpj_nota:
-        for fornecedor in Fornecedor.objects.exclude(cnpj=''):
+        for fornecedor in Fornecedor.objects.filter(empresa=empresa).exclude(cnpj=''):
             if re.sub(r'\D', '', fornecedor.cnpj) == cnpj_nota:
                 return fornecedor
 
     fornecedor, _ = Fornecedor.objects.get_or_create(
+        empresa=empresa,
         nome__iexact=emitente.nome,
         defaults={'nome': emitente.nome, 'cnpj': emitente.cnpj},
     )
@@ -238,7 +232,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
         ?categoria=<id>     -> só produtos dessa categoria
         ?fornecedor=<id>    -> só produtos desse fornecedor
         """
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
 
         nome = self.request.query_params.get('nome')
         if nome:
@@ -264,7 +258,8 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
         (categoria/fornecedor são identificados pelo nome; se não existirem, são criados)
         Se já existir um produto com o mesmo nome, os campos presentes na linha são
         atualizados (células vazias não sobrescrevem valores já cadastrados);
-        caso contrário, um novo produto é criado.
+        caso contrário, um novo produto é criado. A coluna "quantidade" nunca
+        sobrescreve o saldo diretamente — gera um ajuste de inventário com histórico.
         Linhas inválidas são reportadas individualmente, sem interromper o restante do arquivo.
         """
         arquivo = request.FILES.get('arquivo')
@@ -295,6 +290,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        empresa = ServicoEstoque.get_empresa_padrao()
         criados = 0
         atualizados = 0
         erros = []
@@ -303,16 +299,14 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
             nome = (linha.get('nome') or '').strip()
             quantidade = (linha.get('quantidade') or '0').strip()
 
-            produto_existente = Produto.objects.filter(nome=nome).first() if nome else None
+            produto_existente = Produto.objects.filter(empresa=empresa, nome=nome).first() if nome else None
 
             if produto_existente:
-                dados = {
-                    'quantidade': quantidade,
-                    **_dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=False),
-                }
+                dados = _dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=False, empresa=empresa)
                 serializer = ProdutoSerializer(produto_existente, data=dados, partial=True)
                 if serializer.is_valid():
-                    serializer.save()
+                    produto = serializer.save()
+                    ServicoEstoque.definir_saldo_inicial(produto, quantidade)
                     atualizados += 1
                 else:
                     erros.append({'linha': numero_linha, 'mensagem': _formatar_erros(serializer.errors)})
@@ -320,12 +314,12 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
 
             dados = {
                 'nome': nome,
-                'quantidade': quantidade,
-                **_dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=True),
+                **_dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=True, empresa=empresa),
             }
             serializer = ProdutoSerializer(data=dados)
             if serializer.is_valid():
-                serializer.save()
+                produto = serializer.save()
+                ServicoEstoque.definir_saldo_inicial(produto, quantidade)
                 criados += 1
             else:
                 erros.append({'linha': numero_linha, 'mensagem': _formatar_erros(serializer.errors)})
@@ -356,9 +350,9 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 produto.categoria.nome if produto.categoria_id else '',
                 produto.fornecedor.nome if produto.fornecedor_id else '',
                 produto.unidade_medida,
-                produto.quantidade,
+                ServicoEstoque.saldo_disponivel(produto),
                 produto.estoque_minimo,
-                produto.preco_custo,
+                produto.preco_custo_referencia,
                 produto.preco,
                 'true' if produto.ativo else 'false',
                 produto.descricao,
@@ -391,10 +385,12 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
         except nfe.NFeInvalidaError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        fornecedor = _obter_ou_criar_fornecedor_por_nfe(dados.emitente)
+        empresa = ServicoEstoque.get_empresa_padrao()
+        fornecedor = _obter_ou_criar_fornecedor_por_nfe(dados.emitente, empresa)
         nota_fiscal, _ = NotaFiscalCompra.objects.get_or_create(
             chave_acesso=dados.chave_acesso,
             defaults={
+                'empresa': empresa,
                 'numero': dados.numero,
                 'fornecedor': fornecedor,
                 'valor_total': dados.valor_total,
@@ -423,7 +419,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 itens_ja_processados += 1
                 continue
 
-            produto = _buscar_produto_por_item_nfe(item_nfe)
+            produto = _buscar_produto_por_item_nfe(item_nfe, empresa)
             if produto is None:
                 nao_encontrados.append({
                     'item': item_nfe.numero_item,
@@ -432,47 +428,27 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 })
                 continue
 
-            if item_nfe.quantidade != item_nfe.quantidade.to_integral_value():
-                erros.append({
-                    'item': item_nfe.numero_item,
-                    'mensagem': (
-                        f'Quantidade fracionária ({item_nfe.quantidade}) não suportada '
-                        f'para "{produto.nome}".'
-                    ),
-                })
-                continue
-
             preco_custo = item_nfe.valor_unitario.quantize(Decimal('0.01'))
             preco_serializer = ProdutoSerializer(
-                produto, data={'preco_custo': str(preco_custo)}, partial=True,
+                produto, data={'preco_custo_referencia': str(preco_custo)}, partial=True,
             )
-            mov_serializer = MovimentacaoSerializer(data={
-                'produto': produto.id,
-                'tipo': Movimentacao.COMPRA,
-                'quantidade': int(item_nfe.quantidade),
-                'solicitante': request.user.username,
-                'observacao': f'Compra via NF-e {dados.numero}',
-            })
-
-            preco_valido = preco_serializer.is_valid()
-            mov_valido = mov_serializer.is_valid()
-            if not (preco_valido and mov_valido):
-                mensagens = []
-                if not preco_valido:
-                    mensagens.append(_formatar_erros(preco_serializer.errors))
-                if not mov_valido:
-                    mensagens.append(_formatar_erros(mov_serializer.errors))
-                erros.append({'item': item_nfe.numero_item, 'mensagem': '; '.join(mensagens)})
+            if not preco_serializer.is_valid():
+                erros.append({'item': item_nfe.numero_item, 'mensagem': _formatar_erros(preco_serializer.errors)})
                 continue
 
-            with transaction.atomic():
-                preco_serializer.save()
-                movimentacao = mov_serializer.save()
-                _ajustar_estoque(movimentacao)
-                item_registro.produto = produto
-                item_registro.movimentacao = movimentacao
-                item_registro.processado = True
-                item_registro.save(update_fields=['produto', 'movimentacao', 'processado'])
+            preco_serializer.save()
+            movimentacao = ServicoEstoque.registrar_movimentacao(
+                produto=produto,
+                tipo=Movimentacao.COMPRA,
+                quantidade=item_nfe.quantidade,
+                custo_unitario=item_nfe.valor_unitario,
+                solicitante=request.user.username,
+                observacao=f'Compra via NF-e {dados.numero}',
+            )
+            item_registro.produto = produto
+            item_registro.movimentacao = movimentacao
+            item_registro.processado = True
+            item_registro.save(update_fields=['produto', 'movimentacao', 'processado'])
 
             itens_processados += 1
 
@@ -495,7 +471,7 @@ class CategoriaViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
     serializer_class = CategoriaSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
         nome = self.request.query_params.get('nome')
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
@@ -529,7 +505,7 @@ class FornecedorViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
     serializer_class = FornecedorSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
         nome = self.request.query_params.get('nome')
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
@@ -559,25 +535,35 @@ class FornecedorViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
 
 class MovimentacaoViewSet(viewsets.ModelViewSet):
     """
-    Registra requisições e devoluções, ajustando o estoque do produto
-    dentro de uma transação atômica.
+    Registra requisições, devoluções, compras e ajustes de inventário,
+    delegando o cálculo/gravação do saldo ao ServicoEstoque.
     """
     queryset = Movimentacao.objects.select_related('produto').all()
     serializer_class = MovimentacaoSerializer
 
     def get_queryset(self):
         """GET /api/movimentacoes/?produto=<id> -> histórico de um produto específico"""
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
         produto_id = self.request.query_params.get('produto')
         if produto_id:
             queryset = queryset.filter(produto_id=produto_id)
         return queryset
 
-    @transaction.atomic
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        movimentacao = serializer.save()
-        _ajustar_estoque(movimentacao)
+        dados = serializer.validated_data
+
+        try:
+            movimentacao = ServicoEstoque.registrar_movimentacao(
+                produto=dados['produto'],
+                tipo=dados['tipo'],
+                quantidade=dados['quantidade'],
+                custo_unitario=dados.get('custo_unitario'),
+                solicitante=dados.get('solicitante', ''),
+                observacao=dados.get('observacao', ''),
+            )
+        except SaldoInsuficienteError as exc:
+            raise ValidationError(exc.mensagem)
 
         return Response(self.get_serializer(movimentacao).data, status=status.HTTP_201_CREATED)

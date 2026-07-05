@@ -41,16 +41,12 @@
       </select>
     </div>
     <div>
-      <label>Quantidade{{ emEdicao ? '' : ' inicial' }}</label>
-      <input type="number" min="0" formControlName="quantidade" name="quantidade">
-    </div>
-    <div>
       <label>Estoque mínimo</label>
       <input type="number" min="0" formControlName="estoque_minimo" name="estoque_minimo">
     </div>
     <div>
-      <label>Preço de custo (R$)</label>
-      <input type="number" min="0" step="0.01" formControlName="preco_custo" name="preco_custo">
+      <label>Preço de custo de referência (R$)</label>
+      <input type="number" min="0" step="0.01" formControlName="preco_custo_referencia" name="preco_custo_referencia">
     </div>
     <div>
       <label>Preço de venda (R$)</label>

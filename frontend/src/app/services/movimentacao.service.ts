@@ -17,15 +17,15 @@ interface Paginado<T> {
 export class MovimentacaoService {
   constructor(private http: HttpClient) {}
 
-  // GET /api/movimentacoes/?produto=<id> -> histórico de requisições e devoluções,
+  // GET /api/movimentacoes/?produto=<id> -> histórico de movimentações,
   // opcionalmente filtrado por um produto específico
   listar(produtoId?: number): Observable<Paginado<Movimentacao>> {
     const params = produtoId ? new HttpParams().set('produto', produtoId) : undefined;
     return this.http.get<Paginado<Movimentacao>>(API_URL, { params });
   }
 
-  // POST /api/movimentacoes/ -> registra requisição ou devolução
-  // O backend ajusta a quantidade do produto automaticamente.
+  // POST /api/movimentacoes/ -> registra a movimentação.
+  // O backend recalcula o saldo (SaldoEstoque) automaticamente a partir do ledger.
   criar(movimentacao: Movimentacao): Observable<Movimentacao> {
     return this.http.post<Movimentacao>(API_URL, movimentacao);
   }
