@@ -9,11 +9,15 @@ import { FornecedorFormComponent } from './components/fornecedor-form/fornecedor
 import { MovimentacaoFormComponent } from './components/movimentacao-form/movimentacao-form.component';
 import { ImportacoesComponent } from './components/importacoes/importacoes.component';
 import { LoginComponent } from './components/login/login.component';
+import { RegistroComponent } from './components/registro/registro.component';
+import { ConfirmarEmailComponent } from './components/confirmar-email/confirmar-email.component';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'produtos', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  { path: 'registro', component: RegistroComponent },
+  { path: 'confirmar-email/:uid/:token', component: ConfirmarEmailComponent },
   { path: 'produtos', component: ProdutoListComponent, canActivate: [authGuard] },
   { path: 'produtos/novo', component: ProdutoFormComponent, canActivate: [authGuard] },
   { path: 'produtos/:id/editar', component: ProdutoFormComponent, canActivate: [authGuard] },

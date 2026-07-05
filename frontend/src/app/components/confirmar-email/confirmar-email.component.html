@@ -1,0 +1,18 @@
+<section class="confirmacao-shell">
+  <div class="confirmacao-card">
+    <p class="confirmacao-brand">📦 Controle de Estoque</p>
+
+    <ng-container *ngIf="confirmando; else resultado">
+      <h1>Confirmando seu e-mail...</h1>
+      <p>Só um instante.</p>
+    </ng-container>
+
+    <ng-template #resultado>
+      <h1>Não foi possível confirmar</h1>
+      <div class="alert alert-error">{{ erro }}</div>
+      <p class="confirmacao-rodape">
+        <a routerLink="/registro">Criar uma nova conta</a> ou <a routerLink="/login">voltar para o login</a>.
+      </p>
+    </ng-template>
+  </div>
+</section>

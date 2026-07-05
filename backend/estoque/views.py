@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
@@ -15,6 +15,17 @@ from . import nfe
 from .models import Produto, Categoria, Fornecedor, Movimentacao, NotaFiscalCompra, ItemNotaFiscalCompra
 from .serializers import ProdutoSerializer, CategoriaSerializer, FornecedorSerializer, MovimentacaoSerializer
 from .services import ServicoEstoque, SaldoInsuficienteError, TIPOS_ENTRADA
+
+
+def _empresa_do_usuario(request):
+    """Empresa do usuário autenticado — é isso que isola os dados entre
+    tenants em toda requisição real. Superusers criados via createsuperuser
+    (uso só de /admin) não têm empresa; usá-los contra a API dá 403 em vez de
+    misturar dados de todo mundo numa "empresa padrão" implícita."""
+    empresa = getattr(request.user, 'empresa', None)
+    if empresa is None:
+        raise PermissionDenied('Sua conta não está associada a uma empresa.')
+    return empresa
 
 
 def _formatar_erros(erros_por_campo):
@@ -131,7 +142,7 @@ def _importar_csv_simples(request, model, serializer_class, coluna_chave, coluna
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    empresa = ServicoEstoque.get_empresa_padrao()
+    empresa = _empresa_do_usuario(request)
     criados = 0
     atualizados = 0
     erros = []
@@ -147,7 +158,7 @@ def _importar_csv_simples(request, model, serializer_class, coluna_chave, coluna
                 dados[campo] = (linha.get(campo) or '').strip()
 
         instancia = model.objects.filter(empresa=empresa, **{coluna_chave: chave}).first()
-        serializer = serializer_class(instancia, data=dados, partial=bool(instancia))
+        serializer = serializer_class(instancia, data=dados, partial=bool(instancia), context={'request': request})
         if serializer.is_valid():
             serializer.save()
             if instancia:
@@ -233,7 +244,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
         ?categoria=<id>     -> só produtos dessa categoria
         ?fornecedor=<id>    -> só produtos desse fornecedor
         """
-        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
+        queryset = super().get_queryset().filter(empresa=_empresa_do_usuario(self.request))
 
         nome = self.request.query_params.get('nome')
         if nome:
@@ -291,7 +302,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        empresa = ServicoEstoque.get_empresa_padrao()
+        empresa = _empresa_do_usuario(request)
         criados = 0
         atualizados = 0
         erros = []
@@ -304,7 +315,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
 
             if produto_existente:
                 dados = _dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=False, empresa=empresa)
-                serializer = ProdutoSerializer(produto_existente, data=dados, partial=True)
+                serializer = ProdutoSerializer(produto_existente, data=dados, partial=True, context={'request': request})
                 if serializer.is_valid():
                     produto = serializer.save()
                     ServicoEstoque.definir_saldo_inicial(produto, quantidade, usuario=request.user)
@@ -317,7 +328,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
                 'nome': nome,
                 **_dados_opcionais_produto(linha, colunas_presentes, incluir_vazios=True, empresa=empresa),
             }
-            serializer = ProdutoSerializer(data=dados)
+            serializer = ProdutoSerializer(data=dados, context={'request': request})
             if serializer.is_valid():
                 produto = serializer.save()
                 ServicoEstoque.definir_saldo_inicial(produto, quantidade, usuario=request.user)
@@ -386,7 +397,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
         except nfe.NFeInvalidaError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        empresa = ServicoEstoque.get_empresa_padrao()
+        empresa = _empresa_do_usuario(request)
         fornecedor = _obter_ou_criar_fornecedor_por_nfe(dados.emitente, empresa)
         nota_fiscal, _ = NotaFiscalCompra.objects.get_or_create(
             chave_acesso=dados.chave_acesso,
@@ -432,6 +443,7 @@ class ProdutoViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
             preco_custo = item_nfe.valor_unitario.quantize(Decimal('0.01'))
             preco_serializer = ProdutoSerializer(
                 produto, data={'preco_custo_referencia': str(preco_custo)}, partial=True,
+                context={'request': request},
             )
             if not preco_serializer.is_valid():
                 erros.append({'item': item_nfe.numero_item, 'mensagem': _formatar_erros(preco_serializer.errors)})
@@ -472,7 +484,7 @@ class CategoriaViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
     serializer_class = CategoriaSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
+        queryset = super().get_queryset().filter(empresa=_empresa_do_usuario(self.request))
         nome = self.request.query_params.get('nome')
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
@@ -506,7 +518,7 @@ class FornecedorViewSet(InativarAoRemoverMixin, viewsets.ModelViewSet):
     serializer_class = FornecedorSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
+        queryset = super().get_queryset().filter(empresa=_empresa_do_usuario(self.request))
         nome = self.request.query_params.get('nome')
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
@@ -548,7 +560,7 @@ class MovimentacaoViewSet(viewsets.ModelViewSet):
         ?data_inicio=AAAA-MM-DD e/ou ?data_fim=AAAA-MM-DD -> restringe ao período
         (datas inválidas são ignoradas, sem quebrar a listagem)
         """
-        queryset = super().get_queryset().filter(empresa=ServicoEstoque.get_empresa_padrao())
+        queryset = super().get_queryset().filter(empresa=_empresa_do_usuario(self.request))
         produto_id = self.request.query_params.get('produto')
         if produto_id:
             queryset = queryset.filter(produto_id=produto_id)

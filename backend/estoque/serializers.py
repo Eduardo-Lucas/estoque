@@ -6,23 +6,27 @@ from .models import Categoria, Fornecedor, Movimentacao, Produto
 from .services import ServicoEstoque, TIPOS_SAIDA
 
 
-class _EmpresaPadraoDefault:
+class _EmpresaDoUsuarioDefault:
     """Default de campo oculto usado por todo serializer com unique_together
     envolvendo `empresa`: sem isso o DRF não consegue gerar o
     UniqueTogetherValidator (precisa que todo campo da constraint esteja no
-    serializer) e a violação vaza como IntegrityError/500 em vez de 400."""
+    serializer) e a violação vaza como IntegrityError/500 em vez de 400.
 
-    requires_context = False
+    Mesmo protocolo que `serializers.CurrentUserDefault` usa
+    (`requires_context = True`) — o ViewSet já passa `request` no contexto
+    por padrão, então nenhum outro lugar precisa mudar por causa disso."""
 
-    def __call__(self):
-        return ServicoEstoque.get_empresa_padrao()
+    requires_context = True
+
+    def __call__(self, serializer_field):
+        return serializer_field.context['request'].user.empresa
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
-    empresa = serializers.HiddenField(default=_EmpresaPadraoDefault())
+    empresa = serializers.HiddenField(default=_EmpresaDoUsuarioDefault())
 
     class Meta:
         model = Categoria
@@ -30,7 +34,7 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 class FornecedorSerializer(serializers.ModelSerializer):
-    empresa = serializers.HiddenField(default=_EmpresaPadraoDefault())
+    empresa = serializers.HiddenField(default=_EmpresaDoUsuarioDefault())
 
     class Meta:
         model = Fornecedor
@@ -38,7 +42,7 @@ class FornecedorSerializer(serializers.ModelSerializer):
 
 
 class ProdutoSerializer(serializers.ModelSerializer):
-    empresa = serializers.HiddenField(default=_EmpresaPadraoDefault())
+    empresa = serializers.HiddenField(default=_EmpresaDoUsuarioDefault())
     # unique_together com "empresa" faz o DRF forçar required=True em campos
     # sem default (mesmo com null=True/blank=True no model) — precisa de um
     # default explícito para sku continuar opcional.
@@ -62,6 +66,19 @@ class ProdutoSerializer(serializers.ModelSerializer):
         saldo = obj.saldos.filter(deposito=deposito).first()
         return saldo.custo_medio if saldo else Decimal('0.0000')
 
+    def get_fields(self):
+        # categoria/fornecedor não podem apontar pra outra empresa — sem isso
+        # bastaria adivinhar o id de uma categoria alheia pra "vazar" a
+        # referência entre tenants (o registro em si continuaria isolado,
+        # mas o FK ficaria incoerente).
+        fields = super().get_fields()
+        request = self.context.get('request')
+        empresa = getattr(getattr(request, 'user', None), 'empresa', None)
+        if empresa is not None:
+            fields['categoria'].queryset = Categoria.objects.filter(empresa=empresa)
+            fields['fornecedor'].queryset = Fornecedor.objects.filter(empresa=empresa)
+        return fields
+
     class Meta:
         model = Produto
         fields = [
@@ -75,6 +92,15 @@ class ProdutoSerializer(serializers.ModelSerializer):
 
 class MovimentacaoSerializer(serializers.ModelSerializer):
     produto_nome = serializers.CharField(source='produto.nome', read_only=True)
+
+    def get_fields(self):
+        # mesma razão do ProdutoSerializer: produto não pode ser de outra empresa.
+        fields = super().get_fields()
+        request = self.context.get('request')
+        empresa = getattr(getattr(request, 'user', None), 'empresa', None)
+        if empresa is not None:
+            fields['produto'].queryset = Produto.objects.filter(empresa=empresa)
+        return fields
 
     class Meta:
         model = Movimentacao

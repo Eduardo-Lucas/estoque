@@ -1,0 +1,116 @@
+<section class="login-shell">
+  <div class="login-form-panel">
+    <p class="login-brand">📦 Controle de Estoque</p>
+
+    <ng-container *ngIf="!cadastroConcluido; else confirmacaoPendente">
+      <h1 class="login-titulo">Criar conta</h1>
+      <p class="login-subtitulo">Cadastre sua empresa e comece a organizar o estoque.</p>
+
+      <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
+      <div class="alert alert-error" *ngIf="form.hasError('senhasDiferentes') && form.get('confirmarPassword')?.touched">
+        As senhas não coincidem.
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="cadastrar()" class="login-form">
+        <div>
+          <label>Seu nome</label>
+          <input formControlName="nome" name="nome" placeholder="Nome completo" autocomplete="name">
+        </div>
+
+        <div>
+          <label>E-mail</label>
+          <input type="email" formControlName="email" name="email" placeholder="E-mail" autocomplete="email">
+        </div>
+
+        <div>
+          <label>Senha</label>
+          <div class="senha-wrapper">
+            <input [type]="senhaVisivel ? 'text' : 'password'" formControlName="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            <button
+              type="button"
+              class="toggle-senha"
+              (click)="alternarVisibilidadeSenha()"
+              [attr.aria-label]="senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'"
+              [attr.aria-pressed]="senhaVisivel"
+            >
+              <svg *ngIf="!senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <svg *ngIf="senhaVisivel" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.87 3.88M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label>Confirmar senha</label>
+          <input type="password" formControlName="confirmarPassword" name="confirmarPassword" placeholder="Repita a senha" autocomplete="new-password">
+        </div>
+
+        <div>
+          <label>Razão social da empresa</label>
+          <input formControlName="empresaRazaoSocial" name="empresaRazaoSocial" placeholder="Razão social">
+        </div>
+
+        <div>
+          <label>Nome fantasia (opcional)</label>
+          <input formControlName="empresaNomeFantasia" name="empresaNomeFantasia" placeholder="Nome fantasia">
+        </div>
+
+        <div>
+          <label>CNPJ</label>
+          <input formControlName="empresaCnpj" name="empresaCnpj" placeholder="Só números">
+        </div>
+
+        <button type="submit" class="login-submit" [disabled]="carregando">{{ carregando ? 'Criando conta...' : 'Criar conta' }}</button>
+      </form>
+
+      <p class="login-rodape">Já tem uma conta? <a routerLink="/login">Entrar</a></p>
+    </ng-container>
+
+    <ng-template #confirmacaoPendente>
+      <h1 class="login-titulo">Quase lá!</h1>
+      <p class="login-subtitulo">
+        Enviamos um link de confirmação para o seu e-mail. Clique nele para ativar sua conta e começar a usar o sistema.
+      </p>
+      <p class="login-rodape"><a routerLink="/login">Voltar para o login</a></p>
+    </ng-template>
+  </div>
+
+  <div class="login-illustration-panel" aria-hidden="true">
+    <svg viewBox="0 0 400 520" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <defs>
+        <linearGradient id="registroSkyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7dd3fc" />
+          <stop offset="100%" stop-color="#2563eb" />
+        </linearGradient>
+        <linearGradient id="registroArchGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fb923c" />
+          <stop offset="100%" stop-color="#c2410c" />
+        </linearGradient>
+      </defs>
+
+      <rect width="400" height="520" fill="url(#registroSkyGrad)" />
+
+      <path
+        fill-rule="evenodd"
+        fill="url(#registroArchGrad)"
+        d="M20,360 C20,250 60,120 140,110 C180,105 220,105 260,110 C340,120 380,250 380,360 Z
+           M140,360 L140,220 C140,175 260,175 260,220 L260,360 Z"
+      />
+
+      <rect x="155" y="270" width="24" height="26" fill="#fde68a" />
+      <rect x="184" y="255" width="26" height="41" fill="#fcd34d" />
+      <rect x="215" y="278" width="22" height="18" fill="#fde68a" />
+
+      <rect x="0" y="380" width="400" height="140" fill="#e0f2fe" />
+      <path d="M0,380 L400,380 L400,392 L0,404 Z" fill="#bae6fd" opacity="0.6" />
+
+      <text x="24" y="36" fill="#ffffff" font-size="15" font-weight="600" opacity="0.9">Controle de Estoque</text>
+      <text x="24" y="56" fill="#ffffff" font-size="11" opacity="0.7">crie sua empresa · organize seu estoque</text>
+    </svg>
+  </div>
+</section>

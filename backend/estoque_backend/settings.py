@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -88,6 +89,14 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
     'http://127.0.0.1:4200',
 ]
+
+# E-mail de confirmação de cadastro: em dev cai no console do runserver
+# (nenhum SMTP configurado). Em produção, sobrescreva via variável de ambiente.
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@estoque.local')
+
+# Base da URL do frontend, usada para montar o link de confirmação de e-mail.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'estoque.pagination.PaginacaoPadrao',

@@ -37,6 +37,12 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField('e-mail', unique=True)
     nome = models.CharField('nome', max_length=150, blank=True)
+    # Nulo pra superusers criados via createsuperuser (uso só de /admin).
+    # Todo usuário que se cadastra pelo fluxo público (contas.views.RegistroView)
+    # já ganha uma empresa nova, criada junto, na mesma transação.
+    empresa = models.ForeignKey(
+        'estoque.Empresa', on_delete=models.PROTECT, null=True, blank=True, related_name='usuarios',
+    )
     is_active = models.BooleanField('ativo', default=True)
     is_staff = models.BooleanField('equipe', default=False)
     date_joined = models.DateTimeField('criado em', auto_now_add=True)

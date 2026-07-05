@@ -1,10 +1,10 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import { Credenciais, TokenResponse } from '../models/auth.model';
+import { Credenciais, DadosRegistro, RespostaRegistro, TokenResponse } from '../models/auth.model';
 import { environment } from '../../environments/environment';
 
-const API_URL = `${environment.apiUrl}/auth/token/`;
+const API_AUTH_URL = `${environment.apiUrl}/auth`;
 const STORAGE_KEY = 'estoque_auth_token';
 const EMAIL_STORAGE_KEY = 'estoque_auth_email';
 
@@ -20,8 +20,22 @@ export class AuthService {
 
   login(credenciais: Credenciais): Observable<TokenResponse> {
     return this.http
-      .post<TokenResponse>(API_URL, credenciais)
+      .post<TokenResponse>(`${API_AUTH_URL}/token/`, credenciais)
       .pipe(tap((resposta) => this.armazenarSessao(resposta.token, credenciais.email)));
+  }
+
+  // POST /api/auth/registro/ -> cria a conta e a empresa; a conta nasce
+  // inativa, então isso NÃO guarda sessão — só depois de confirmarEmail().
+  registrar(dados: DadosRegistro): Observable<RespostaRegistro> {
+    return this.http.post<RespostaRegistro>(`${API_AUTH_URL}/registro/`, dados);
+  }
+
+  // POST /api/auth/confirmar-email/ -> confirma a conta e já loga (a resposta
+  // tem o mesmo formato do login).
+  confirmarEmail(uid: string, token: string): Observable<TokenResponse> {
+    return this.http
+      .post<TokenResponse>(`${API_AUTH_URL}/confirmar-email/`, { uid, token })
+      .pipe(tap((resposta) => this.armazenarSessao(resposta.token, resposta.email ?? '')));
   }
 
   logout(): void {
@@ -37,8 +51,10 @@ export class AuthService {
 
   private armazenarSessao(token: string, email: string): void {
     localStorage.setItem(STORAGE_KEY, token);
-    localStorage.setItem(EMAIL_STORAGE_KEY, email);
     this.tokenSignal.set(token);
-    this.emailSignal.set(email);
+    if (email) {
+      localStorage.setItem(EMAIL_STORAGE_KEY, email);
+      this.emailSignal.set(email);
+    }
   }
 }

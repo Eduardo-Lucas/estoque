@@ -16,7 +16,7 @@ comunica com o backend (Django + DRF) via HTTP/REST.
 estoque/
 ├── backend/            Django + DRF
 │   ├── estoque_backend/    settings, urls raiz
-│   ├── contas/              modelo de usuário customizado (login por e-mail)
+│   ├── contas/              usuário customizado (login por e-mail) + registro/confirmação
 │   └── estoque/             app com models, serializers, views, urls, admin
 │       ├── services.py          ServicoEstoque — único ponto de escrita de saldo/ledger
 │       └── nfe.py               parsing puro do XML de NF-e (sem acesso a banco)
@@ -26,8 +26,8 @@ estoque/
         ├── services/        chamadas HTTP (HttpClient)
         ├── guards/          authGuard (protege rotas autenticadas)
         ├── interceptors/    injeta o token e trata erros de HTTP
-        └── components/      telas (produto, categoria, fornecedor,
-                              movimentação, importações, login)
+        └── components/      telas (produto, categoria, fornecedor, movimentação,
+                              importações, login, registro, confirmar-email)
 ```
 
 ## Funcionalidades
@@ -39,6 +39,24 @@ estoque/
   HTTP anexam o token e tratam 401. A tela de login (`/login`) usa um
   layout dividido — formulário à esquerda, ilustração temática de estoque
   à direita (escondida em telas estreitas).
+- **Cadastro de conta + empresa com confirmação por e-mail** (`/registro`):
+  cria a conta do usuário e a empresa dele numa transação só (`Empresa` +
+  `ConfiguracaoEstoque` padrão + `Deposito` "PADRAO"), com a conta inativa
+  até confirmar. `POST /api/auth/registro/` dispara um e-mail (em dev, cai
+  no console do `runserver` — ver `EMAIL_BACKEND`) com um link pra
+  `/confirmar-email/:uid/:token`; confirmar já loga automaticamente
+  (`POST /api/auth/confirmar-email/` devolve token de sessão, igual ao
+  login). O token de confirmação usa o mesmo mecanismo do "esqueci minha
+  senha" do Django (`PasswordResetTokenGenerator`) — sem tabela própria,
+  e o link antigo já vira inválido sozinho assim que a conta é confirmada.
+- **Multi-tenant de verdade**: cada `contas.Usuario` pertence a uma
+  `Empresa` (`usuario.empresa`), e toda a API filtra por ela — produtos,
+  categorias, fornecedores e movimentações de uma empresa nunca aparecem
+  pra outra, e não dá pra criar um produto referenciando a categoria/
+  fornecedor/produto de outra empresa (os `PrimaryKeyRelatedField` desses
+  relacionamentos são escopados por empresa no serializer). Contas sem
+  empresa (ex: um superuser criado via `createsuperuser`, pensado só pro
+  `/admin`) recebem 403 ao chamar a API de negócio.
 - **Produtos**: cadastro completo — nome, SKU, código de barras, categoria,
   fornecedor, unidade de medida, estoque mínimo, preço de custo de referência,
   preço de venda e status ativo/inativo. O saldo em estoque **não é mais um
@@ -65,11 +83,10 @@ estoque/
   saldo por `Produto.preco_custo_referencia`, preservando o preço de compra
   real no movimento de entrada). Produtos podem exigir controle de lote
   (`Produto.controla_lote`/`ConfiguracaoEstoque.controla_lote_por_padrao`).
-- **`Empresa`/`Deposito`**: modelos novos, mas ainda são só *scaffolding*
-  interno — uma única empresa e um único depósito "padrão" são semeados por
-  migration, sem tela, login por empresa ou qualquer filtro visível na API/
-  frontend ainda. Preparam o terreno para multi-tenant e múltiplos depósitos
-  numa PR futura.
+- **`Deposito`**: ainda é só *scaffolding* — toda empresa (inclusive a
+  criada no `/registro`) ganha um único depósito "PADRAO" automaticamente;
+  múltiplos depósitos por empresa e transferência entre eles ficam pra uma
+  PR futura.
 - **Histórico de movimentações por produto**: tela de detalhe
   (`/produtos/:id/historico`, acessível pelo botão "Histórico" na lista)
   mostrando os dados do produto (incluindo saldo atual) e só as
@@ -127,7 +144,10 @@ python manage.py runserver
 ```
 
 API disponível em `http://localhost:8000/api/` (autenticação por token
-obrigatória, exceto `POST /api/auth/token/`):
+obrigatória, exceto as três rotas de `/api/auth/` abaixo):
+- `POST /api/auth/registro/` — cria a conta (inativa) + a empresa do usuário
+- `POST /api/auth/confirmar-email/` (`{"uid", "token"}`) — confirma a conta e já loga
+- `POST /api/auth/token/` — login por e-mail (`{"email": ..., "password": ...}`), retorna o token do usuário
 - `GET/POST /api/produtos/`, `GET/PUT/DELETE /api/produtos/{id}/`
   (`GET` aceita `?nome=`, `?categoria=<id>`, `?fornecedor=<id>` para filtrar;
   `DELETE` inativa — define `ativo=False` — em vez de remover o registro)
@@ -141,7 +161,6 @@ obrigatória, exceto `POST /api/auth/token/`):
 - `POST /api/fornecedores/importar_csv/`, `GET /api/fornecedores/exportar_csv/`
 - `GET/POST /api/movimentacoes/`, `?produto=<id>` filtra o histórico de um produto,
   `?data_inicio=AAAA-MM-DD` e/ou `?data_fim=AAAA-MM-DD` restringem por período
-- `POST /api/auth/token/` — login por e-mail (`{"email": ..., "password": ...}`), retorna o token do usuário
 
 ### Frontend
 
@@ -151,8 +170,10 @@ npm install
 npm start
 ```
 
-Acesse `http://localhost:4200` e faça login com o e-mail/senha criados via
-`createsuperuser` (ou outro `contas.Usuario` existente).
+Acesse `http://localhost:4200` e crie uma conta em `/registro` (cria a sua
+empresa junto) — em dev, o e-mail de confirmação cai no console do
+`runserver`, copie o link de lá. Ou, se preferir, faça login em `/login`
+com o e-mail/senha de um `createsuperuser` já existente.
 
 > O CORS já está liberado no backend para `localhost:4200` (ver
 > `CORS_ALLOWED_ORIGINS` em `settings.py`).
@@ -178,7 +199,15 @@ médio sempre lidos via `ServicoEstoque`). `test_api_nfe.py` cobre o import
 de NF-e: matching por SKU/nome, reimportação idempotente (mesmo arquivo não
 duplica estoque), item pendente resolvido após cadastro manual +
 reimportação, quantidade fracionária aceita, e matching de fornecedor por
-CNPJ normalizado.
+CNPJ normalizado. `test_isolamento_multi_tenant.py` é o teste mais
+importante do multi-tenant: confirma que produtos/categorias/fornecedores/
+movimentações de uma empresa não aparecem, nem podem ser referenciados,
+por outra.
+
+Testes em `contas/tests/`: cadastro (cria empresa+depósito+configuração,
+e-mail enviado, e-mail/CNPJ duplicado rejeitado, senha fraca rejeitada,
+login bloqueado antes de confirmar) e confirmação de e-mail (token válido
+ativa e loga, token inválido/adulterado/reutilizado é rejeitado).
 
 ### Frontend (Jest + TestBed)
 
@@ -191,8 +220,8 @@ npm test
 Testes em arquivos `*.spec.ts` ao lado de cada arquivo testado: services
 (via `HttpClientTestingModule`), guard/interceptors de autenticação e os
 componentes mais representativos (`produto-list`, `produto-form`,
-`produto-historico`, `importacoes`, `login`, `movimentacao-form`,
-incluindo o `AsyncValidator` de estoque).
+`produto-historico`, `importacoes`, `login`, `registro`, `confirmar-email`,
+`movimentacao-form`, incluindo o `AsyncValidator` de estoque).
 
 ### CI
 
@@ -262,9 +291,10 @@ Exemplo: registrar uma requisição de produto.
   até cadastro manual. O rastreamento é por item da nota (não pela nota
   inteira), então reimportar o mesmo arquivo depois de cadastrar o produto
   processa só o que faltava, sem duplicar o que já foi aplicado.
-- `Empresa`/`Deposito` existem no schema mas ainda não são multi-tenant de
-  verdade: toda a API opera sobre a única empresa/depósito semeados por
-  migration (`ServicoEstoque.get_empresa_padrao`/`get_deposito_padrao`).
+- Multi-tenant real: toda `Movimentacao`/`Produto`/`Categoria`/`Fornecedor`
+  pertence à `Empresa` do usuário autenticado (`estoque/views.py:_empresa_do_usuario`),
+  não a uma empresa "padrão" fixa — `ServicoEstoque.get_empresa_padrao()`
+  ainda existe mas só é usada em testes/seed, não nas requisições reais.
 - Login é por e-mail, não por username — o campo `username` não existe no
   modelo de usuário (`contas.Usuario`); `/api/auth/token/` só aceita
   `{"email": ..., "password": ...}`.
@@ -272,6 +302,7 @@ Exemplo: registrar uma requisição de produto.
 ## Próximos passos sugeridos (para continuar estudando)
 
 - Persistir os filtros de produtos na URL (query params), pra permitir compartilhar/recarregar a busca.
-- Multi-tenant de verdade: amarrar `Empresa` ao `contas.Usuario` autenticado (hoje toda a API usa a empresa "padrão" semeada por migration).
+- Reenvio do e-mail de confirmação e fluxo de "esqueci minha senha" (hoje não existem).
+- Convite de múltiplos usuários pra mesma empresa (hoje cada conta nova cria sua própria empresa).
 - Múltiplos depósitos: expor `Deposito` na UI, `TRANSFERENCIA` entre depósitos e saldo por depósito no `SaldoEstoque`.
 - Controle de lote/validade (`Lote`) e motor de custeio FIFO (`CamadaCusto`), parametrizável por `ConfiguracaoEstoque` (regime tributário/método de valoração).
