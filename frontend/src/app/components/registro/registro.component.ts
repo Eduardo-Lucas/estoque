@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 function senhasIguaisValidator(grupo: AbstractControl): ValidationErrors | null {
@@ -20,10 +20,10 @@ function senhasIguaisValidator(grupo: AbstractControl): ValidationErrors | null 
 export class RegistroComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private router = inject(Router);
 
   erro = '';
   carregando = false;
-  cadastroConcluido = false;
   senhaVisivel = false;
 
   form = this.fb.nonNullable.group(
@@ -65,7 +65,7 @@ export class RegistroComponent {
       .subscribe({
         next: () => {
           this.carregando = false;
-          this.cadastroConcluido = true;
+          this.router.navigate(['/login'], { queryParams: { criado: '1' } });
         },
         error: (err) => {
           this.carregando = false;

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ComponentFixture } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../services/auth.service';
@@ -59,5 +59,27 @@ describe('LoginComponent', () => {
     expect(component.senhaVisivel).toBe(false);
     component.alternarVisibilidadeSenha();
     expect(component.senhaVisivel).toBe(true);
+  });
+});
+
+describe('LoginComponent (vindo do registro)', () => {
+  it('mostra aviso de conta criada quando a query param "criado" está presente', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { login: jest.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ criado: '1' }) } },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.mensagem).toBe('Conta criada! Faça login para continuar.');
   });
 });

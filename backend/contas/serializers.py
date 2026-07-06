@@ -33,8 +33,9 @@ class EmailAuthTokenSerializer(serializers.Serializer):
 
 class RegistroSerializer(serializers.Serializer):
     """Cria a conta do usuário e a empresa dele juntas — hoje não existe fluxo
-    de convite, então toda conta nova é dona de uma empresa nova. A conta
-    nasce inativa (`is_active=False`) até a confirmação por e-mail."""
+    de convite, então toda conta nova é dona de uma empresa nova. Confirmação
+    por e-mail suspensa temporariamente (Render free tier bloqueia SMTP de
+    saída — ver RegistroView): a conta já nasce ativa, e-mail único basta."""
 
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
@@ -76,5 +77,4 @@ class RegistroSerializer(serializers.Serializer):
             password=validated_data['password'],
             nome=validated_data['nome'],
             empresa=empresa,
-            is_active=False,
         )

@@ -1,7 +1,5 @@
-from django.conf import settings
-from django.core.mail import send_mail
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -31,8 +29,10 @@ class LoginView(ObtainAuthToken):
 class RegistroView(APIView):
     """
     POST /api/auth/registro/ — cria a conta do usuário e a empresa dele numa
-    tacada só. A conta nasce inativa; um e-mail com o link de confirmação é
-    disparado (em dev, cai no console do `runserver` — ver EMAIL_BACKEND).
+    tacada só. Confirmação por e-mail suspensa temporariamente (Render free
+    tier bloqueia SMTP de saída): a conta já nasce ativa e pronta pra login,
+    contanto que o e-mail seja único (ver ConfirmarEmailView, ainda de pé
+    pra quando o envio de e-mail via API HTTP for reativado).
     """
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -40,25 +40,10 @@ class RegistroView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = RegistroSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        usuario = serializer.save()
-
-        uid = urlsafe_base64_encode(force_bytes(usuario.pk))
-        token = gerador_token_confirmacao.make_token(usuario)
-        link = f'{settings.FRONTEND_URL}/confirmar-email/{uid}/{token}'
-
-        send_mail(
-            subject='Confirme seu e-mail — Controle de Estoque',
-            message=(
-                f'Olá, {usuario.nome or usuario.email}!\n\n'
-                f'Confirme seu e-mail clicando no link abaixo:\n{link}\n\n'
-                'Se você não fez esse cadastro, ignore esta mensagem.'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[usuario.email],
-        )
+        serializer.save()
 
         return Response(
-            {'detail': 'Cadastro realizado. Confira seu e-mail para confirmar a conta.'},
+            {'detail': 'Cadastro realizado. Faça login para continuar.'},
             status=status.HTTP_201_CREATED,
         )
 

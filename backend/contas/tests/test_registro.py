@@ -25,13 +25,13 @@ def _dados_registro(**overrides):
 
 
 class TestRegistro:
-    def test_cria_conta_inativa_e_empresa_com_deposito_e_configuracao(self):
+    def test_cria_conta_ativa_e_empresa_com_deposito_e_configuracao(self):
         resposta = APIClient().post(reverse('api_registro'), _dados_registro())
 
         assert resposta.status_code == status.HTTP_201_CREATED
 
         usuario = Usuario.objects.get(email='nova@empresa.com')
-        assert usuario.is_active is False
+        assert usuario.is_active is True
         assert usuario.check_password('senha-super-forte-2026')
         assert usuario.nome == 'Fulana de Tal'
 
@@ -41,12 +41,10 @@ class TestRegistro:
         assert ConfiguracaoEstoque.objects.filter(empresa=empresa).exists()
         assert Deposito.objects.filter(empresa=empresa, codigo=CODIGO_DEPOSITO_PADRAO).exists()
 
-    def test_envia_email_de_confirmacao_com_link(self):
+    def test_nao_envia_email_com_confirmacao_suspensa(self):
         APIClient().post(reverse('api_registro'), _dados_registro())
 
-        assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == ['nova@empresa.com']
-        assert '/confirmar-email/' in mail.outbox[0].body
+        assert len(mail.outbox) == 0
 
     def test_email_duplicado_e_rejeitado(self):
         empresa_existente = ServicoEstoque.get_empresa_padrao()
@@ -67,11 +65,12 @@ class TestRegistro:
         resposta = APIClient().post(reverse('api_registro'), _dados_registro(password='123'))
         assert resposta.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_login_falha_para_conta_ainda_nao_confirmada(self):
+    def test_login_funciona_imediatamente_apos_registro(self):
         APIClient().post(reverse('api_registro'), _dados_registro())
 
         resposta = APIClient().post(reverse('api_token_auth'), {
             'email': 'nova@empresa.com', 'password': 'senha-super-forte-2026',
         })
 
-        assert resposta.status_code == status.HTTP_400_BAD_REQUEST
+        assert resposta.status_code == status.HTTP_200_OK
+        assert 'token' in resposta.data
