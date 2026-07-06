@@ -124,7 +124,10 @@ class TestMovimentacaoApiFiltroPeriodo:
         recente = self._criar_com_data(produto=produto, deposito=deposito, usuario=usuario, data=agora)
 
         resposta = api_client.get(reverse('movimentacao-list'), {
-            'data_inicio': (agora - timedelta(days=1)).date().isoformat(),
+            # data__date, na view, extrai a data no fuso local (TIME_ZONE) — o
+            # limite do filtro precisa ser calculado do mesmo jeito, senão o
+            # teste fica instável perto da meia-noite UTC.
+            'data_inicio': timezone.localtime(agora - timedelta(days=1)).date().isoformat(),
         })
 
         assert resposta.data['count'] == 1
@@ -137,7 +140,7 @@ class TestMovimentacaoApiFiltroPeriodo:
         self._criar_com_data(produto=produto, deposito=deposito, usuario=usuario, data=agora)
 
         resposta = api_client.get(reverse('movimentacao-list'), {
-            'data_fim': (agora - timedelta(days=1)).date().isoformat(),
+            'data_fim': timezone.localtime(agora - timedelta(days=1)).date().isoformat(),
         })
 
         assert resposta.data['count'] == 1
@@ -150,8 +153,8 @@ class TestMovimentacaoApiFiltroPeriodo:
         self._criar_com_data(produto=produto, deposito=deposito, usuario=usuario, data=agora)
 
         resposta = api_client.get(reverse('movimentacao-list'), {
-            'data_inicio': (agora - timedelta(days=7)).date().isoformat(),
-            'data_fim': (agora - timedelta(days=3)).date().isoformat(),
+            'data_inicio': timezone.localtime(agora - timedelta(days=7)).date().isoformat(),
+            'data_fim': timezone.localtime(agora - timedelta(days=3)).date().isoformat(),
         })
 
         assert resposta.data['count'] == 1
