@@ -4,6 +4,7 @@
     <h1 class="login-titulo">Bem-vindo</h1>
     <p class="login-subtitulo">Entre com sua conta para acessar o estoque.</p>
 
+    <div class="alert alert-success" *ngIf="mensagem">{{ mensagem }}</div>
     <div class="alert alert-error" *ngIf="erro">{{ erro }}</div>
 
     <form [formGroup]="form" (ngSubmit)="entrar()" class="login-form">

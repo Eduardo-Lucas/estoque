@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from contas.models import Usuario
 from contas.tokens import gerador_token_confirmacao
+from estoque.services import ServicoEstoque
 
 pytestmark = pytest.mark.django_db
 
@@ -19,9 +20,18 @@ DADOS_REGISTRO = {
 }
 
 
-def _registrar_e_obter_usuario(client):
-    client.post(reverse('api_registro'), DADOS_REGISTRO)
-    return Usuario.objects.get(email=DADOS_REGISTRO['email'])
+def _criar_usuario_inativo():
+    """ConfirmarEmailView continua de pé mesmo com RegistroView criando
+    contas já ativas (confirmação por e-mail suspensa temporariamente) —
+    por isso o usuário inativo, aqui, é criado direto via ORM."""
+    empresa = ServicoEstoque.get_empresa_padrao()
+    return Usuario.objects.create_user(
+        email=DADOS_REGISTRO['email'],
+        password=DADOS_REGISTRO['password'],
+        nome=DADOS_REGISTRO['nome'],
+        empresa=empresa,
+        is_active=False,
+    )
 
 
 def _uid_e_token(usuario):
@@ -33,7 +43,7 @@ def _uid_e_token(usuario):
 class TestConfirmarEmail:
     def test_token_valido_ativa_a_conta_e_devolve_token_de_sessao(self):
         client = APIClient()
-        usuario = _registrar_e_obter_usuario(client)
+        usuario = _criar_usuario_inativo()
         uid, token = _uid_e_token(usuario)
 
         resposta = client.post(reverse('api_confirmar_email'), {'uid': uid, 'token': token})
@@ -46,7 +56,7 @@ class TestConfirmarEmail:
 
     def test_apos_confirmar_o_login_normal_passa_a_funcionar(self):
         client = APIClient()
-        usuario = _registrar_e_obter_usuario(client)
+        usuario = _criar_usuario_inativo()
         uid, token = _uid_e_token(usuario)
         client.post(reverse('api_confirmar_email'), {'uid': uid, 'token': token})
 
@@ -59,7 +69,7 @@ class TestConfirmarEmail:
 
     def test_token_invalido_e_rejeitado(self):
         client = APIClient()
-        usuario = _registrar_e_obter_usuario(client)
+        usuario = _criar_usuario_inativo()
         uid, _token = _uid_e_token(usuario)
 
         resposta = client.post(reverse('api_confirmar_email'), {'uid': uid, 'token': 'token-forjado'})
@@ -74,7 +84,7 @@ class TestConfirmarEmail:
 
     def test_token_nao_pode_ser_reaproveitado_apos_confirmar(self):
         client = APIClient()
-        usuario = _registrar_e_obter_usuario(client)
+        usuario = _criar_usuario_inativo()
         uid, token = _uid_e_token(usuario)
 
         primeira = client.post(reverse('api_confirmar_email'), {'uid': uid, 'token': token})
