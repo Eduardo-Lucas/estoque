@@ -440,9 +440,13 @@ fixa no código, exceto os nomes dos serviços no próprio `render.yaml`.
    ligados a um Blueprint) — sem passo extra de CI/CD.
 3. Para criar a sua conta no ambiente publicado, use o `/registro` do próprio
    frontend implantado (mesmo fluxo do dev local) — não precisa de
-   `createsuperuser` pra isso. Se quiser acesso ao `/admin`, rode
-   `python manage.py createsuperuser` manualmente pelo Shell do serviço no
-   Render.
+   `createsuperuser` pra isso.
+4. Se quiser acesso ao `/admin`: o plano free do Render não tem Shell, então
+   `createsuperuser` interativo não dá pra rodar. Em vez disso, preencha
+   `DJANGO_SUPERUSER_EMAIL` e `DJANGO_SUPERUSER_PASSWORD` no Environment do
+   `estoque-backend` e dispare um redeploy — o `build.sh` roda o comando
+   `criar_superusuario_inicial`, que cria a conta se ela ainda não existir
+   (idempotente: não recria nem falha em builds seguintes).
 
 ### Limitações da camada gratuita (aceitas conscientemente)
 
